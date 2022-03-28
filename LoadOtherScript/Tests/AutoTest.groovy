@@ -28,10 +28,17 @@ pipeline {
 
 def test_init(def workspace_path) {
     // def result = powershell returnStdout: true, script: "<powershell command>"
-    powershell "ls"
+    powershell "ls ${workspace_path}"
 }
 
 def execute_test_suite() {
+    test_MainJobA = load "./test_MainJobA.groovy"
 
-    return 'SUCCESS'
+    def result_test_MainJobA = test_MainJobA.test_suite()
+
+    if (result_test_MainJobA) {
+        return 'SUCCESS'
+    } else {
+        return 'FAILURE'
+    }
 }

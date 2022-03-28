@@ -18,6 +18,7 @@ pipeline {
 
 def pre_process() {
     g_value1 = 'processed'
+    println(g_value1)
 }
 
 // テストから load する
