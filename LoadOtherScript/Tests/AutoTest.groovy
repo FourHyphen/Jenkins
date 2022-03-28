@@ -18,7 +18,7 @@ pipeline {
             steps {
                 wrap([$class: 'TimestamperBuildWrapper']) {
                     script {
-                        currentResult = execute_test_suite()
+                        currentResult = execute_test_suite(WORKSPACE)
                     }
                 }
             }
