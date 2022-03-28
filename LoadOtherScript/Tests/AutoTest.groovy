@@ -8,7 +8,7 @@ pipeline {
                 // 1.18 以降なら timestamps { } を使える
                 wrap([$class: 'TimestamperBuildWrapper']) {
                     script {
-                        test_init()
+                        test_init(WORKSPACE)
                     }
                 }
             }
@@ -26,8 +26,9 @@ pipeline {
     }
 }
 
-def test_init() {
-    // 
+def test_init(def workspace_path) {
+    // def result = powershell returnStdout: true, script: "<powershell command>"
+    powershell "ls"
 }
 
 def execute_test_suite() {
