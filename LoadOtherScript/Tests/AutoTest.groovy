@@ -32,7 +32,7 @@ def test_init(def workspace_path) {
 }
 
 def execute_test_suite(def workspace_path) {
-    test_MainJobA = load "${workspace_path}/Tests/test_MainJobA.groovy"
+    test_MainJobA = load "${workspace_path}/LoadOtherScript/Tests/test_MainJobA.groovy"
 
     def result_test_MainJobA = test_MainJobA.test_suite()
 
