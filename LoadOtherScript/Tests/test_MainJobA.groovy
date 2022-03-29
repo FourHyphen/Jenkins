@@ -23,7 +23,7 @@ def exclude_pipeline_block(def text) {
     // (?s) -> . が \n にもマッチする(DotAll モード)
     // (?m) -> 複数行マッチモード(^ が \n 直後の行頭にマッチする)
     // 行頭の pipeline { から、\n}\n つまり } のみの行まで控え目マッチ
-    def matching = /(?sm)^?:pipeline *{.*?\n}\n/
+    def matching = /(?sm)^pipeline *{.*?\n}\n/
     def excluded = (text =~ matching)?.replaceAll("")
     println(excluded)
     return excluded
