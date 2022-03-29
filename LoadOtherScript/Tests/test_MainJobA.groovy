@@ -1,13 +1,17 @@
-def test_suite(def workspace_path) {
-    // 多分ここ: java.nio.file.NoSuchFileException: C:\ProgramData\Jenkins\.jenkins\workspace\LoadOtherScript\MainJobA.groovy
-    // 現在地はここのはず: C:\ProgramData\Jenkins\.jenkins\workspace\LoadOtherScript\AutoTest
-    script_MainJobA = load_script("${workspace_path}/LoadOtherScript/MainJobA.groovy")
+def test_suite(def workspace_pathdef unique_id) {
+    // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
+    def test_script_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
+    create_script_without_pipeline_block("${workspace_path}/LoadOtherScript/MainJobA.groovy", test_script_path)
 
-    // println("execute: pre_process()")
-    // script_MainJobA.pre_process()
-    // println("executed: pre_process()")
+    // テスト用のスクリプトを load
+    script_MainJobA = load_script(test_script_path)
 
     return true
+}
+
+def create_script_without_pipeline_block(def original_path, def create_path) {
+    println("create_script_without_pipeline_block()")
+    println("create: ${create_path}")
 }
 
 def load_script(def load_script_path) {
