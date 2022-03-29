@@ -1,4 +1,4 @@
-def test_suite(def workspace_pathdef unique_id) {
+def test_suite(def workspace_path, def unique_id) {
     // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
     def test_script_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
     create_script_without_pipeline_block("${workspace_path}/LoadOtherScript/MainJobA.groovy", test_script_path)
