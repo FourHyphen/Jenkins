@@ -1,3 +1,6 @@
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 pipeline {
     agent any
 
@@ -18,7 +21,9 @@ pipeline {
             steps {
                 wrap([$class: 'TimestamperBuildWrapper']) {
                     script {
-                        currentResult = execute_test_suite(WORKSPACE, BUILD_ID)
+                        def date = LocalDateTime.now()
+                        def now = date.format(DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss'))
+                        currentResult = execute_test_suite(WORKSPACE, "${now}_${BUILD_ID}")
                     }
                 }
             }
