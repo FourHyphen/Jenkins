@@ -14,9 +14,19 @@ def create_script_without_pipeline_block(def original_path, def create_path) {
     println("create_script_without_pipeline_block()")
 
     def text = new File(original_path).text
-    println(text)
+    def contents = exclude_pipeline_block(text)
 
     println("create: ${create_path}")
+}
+
+def exclude_pipeline_block(def text) {
+    // (?s) -> . が \n にもマッチする(DotAll モード)
+    // (?m) -> 複数行マッチモード(^ が \n 直後の行頭にマッチする)
+    // 行頭の pipeline { から、\n}\n つまり } のみの行まで控え目マッチ
+    def matching = /(?sm)^?:pipeline *{.*?\n}\n/
+    def excluded = (text =~ matching)?.replaceAll("")
+    println(excluded)
+    return excluded
 }
 
 def load_script(def load_script_path) {
