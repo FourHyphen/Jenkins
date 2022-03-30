@@ -13,16 +13,19 @@ def test_suite(def workspace_path, def unique_id) {
 def create_script_without_pipeline_block(def original_path, def create_path) {
     println("create_script_without_pipeline_block()")
 
-    def text = new File(original_path).text
+    // pipeline ブロックなしのスクリプト本文を作成
+    def text = new File(original_path).getText()
     def contents = exclude_pipeline_block(text)
 
+    // pipeline ブロックなしのスクリプトファイルを保存
+    new File(create_path).setText(contents)
     println("create: ${create_path}")
 }
 
 def exclude_pipeline_block(def text) {
-    // (?m) -> 複数行マッチモード(^ が \n 直後の行頭にマッチする)
-    // (?s) -> DotAll モード(. が \n にもマッチする)
-    // 行頭の pipeline { から、\n}\n つまり } のみの行まで控え目マッチ
+    // (?m) -> 複数行マッチモード(^ が改行文字直後の行頭にマッチする)
+    // (?s) -> DotAll モード(. が改行文字にもマッチする)
+    // 行頭の "pipeline {" から、"}" のみの行まで控え目マッチ(CRLF改行対応として改行文字を "\r?\n" で表現)
     def matching = /(?m)(?s)^pipeline *\{.*?\r?\n\}\r?\n/
     def excluded = (text =~ matching)?.replaceAll("")
     println(excluded)
