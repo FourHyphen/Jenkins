@@ -11,14 +11,13 @@ def test_suite(String workspace_path, String unique_id) {
 }
 
 def create_script_without_pipeline_block(String original_path, String create_path) {
+    // pipeline ブロックなしのスクリプト本文を作成し、保存する
     println("create_script_without_pipeline_block()")
 
-    // pipeline ブロックなしのスクリプト本文を作成
-    String text = new File(original_path).getText()
+    String text = read_file(original_path)
     String contents = exclude_pipeline_block(text)
+    write_file(create_path, contents)
 
-    // pipeline ブロックなしのスクリプトファイルを保存
-    new File(create_path).setText(contents)
     println("create: ${create_path}")
 }
 
@@ -26,7 +25,7 @@ def read_file(String file_path) {
     return new File(original_path).getText()
 }
 
-def exclude_pipeline_block(def text) {
+def exclude_pipeline_block(String text) {
     // (?m) -> 複数行マッチモード(^ が改行文字直後の行頭にマッチする)
     // (?s) -> DotAll モード(. が改行文字にもマッチする)
     // 行頭の "pipeline {" から、"}" のみの行まで控え目マッチ(CRLF改行対応として改行文字を "\r?\n" で表現)
@@ -34,6 +33,10 @@ def exclude_pipeline_block(def text) {
     def excluded = (text =~ matching)?.replaceAll("")
     println(excluded)
     return excluded
+}
+
+def write_file(String file_path, String contents) {
+    new File(file_path).setText(contents)
 }
 
 def load_script(String load_script_path) {
