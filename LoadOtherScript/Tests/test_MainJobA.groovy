@@ -20,20 +20,10 @@ def create_script_without_pipeline_block(def original_path, def create_path) {
 }
 
 def exclude_pipeline_block(def text) {
-    // (?s) -> . が \n にもマッチする(DotAll モード)
     // (?m) -> 複数行マッチモード(^ が \n 直後の行頭にマッチする)
+    // (?s) -> DotAll モード(. が \n にもマッチする)
     // 行頭の pipeline { から、\n}\n つまり } のみの行まで控え目マッチ
-
-    // あれー？
-    // java.util.regex.PatternSyntaxException: Illegal repetition near index 15
-    // (?sm)^pipeline *{.*?\n}\n
-    //                ^
-    // 	at java.util.regex.Pattern.error(Unknown Source)
-    // 	at java.util.regex.Pattern.closure(Unknown Source)
-    // 	at java.util.regex.Pattern.sequence(Unknown Source)
-    // 	at java.util.regex.Pattern.expr(Unknown Source)
-    // 	at java.util.regex.Pattern.compile(Unknown Source)
-    def matching = /(?sm)^pipeline *\{.*?\n\}\n/
+    def matching = /(?m)(?s)^pipeline *\{.*?\n\}\n/
     def excluded = (text =~ matching)?.replaceAll("")
     println(excluded)
     return excluded
