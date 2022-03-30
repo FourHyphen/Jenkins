@@ -31,13 +31,13 @@ pipeline {
     }
 }
 
-def test_init(def workspace_path) {
+def test_init(String workspace_path) {
     // def result = powershell returnStdout: true, script: "<powershell command>"
-    powershell "ls ${workspace_path}"
+    powershell("ls ${workspace_path}")
 }
 
-def execute_test_suite(def workspace_path, def unique_id) {
-    test_MainJobA = load "${workspace_path}/LoadOtherScript/Tests/test_MainJobA.groovy"
+def execute_test_suite(String workspace_path, String unique_id) {
+    def test_MainJobA = load("${workspace_path}/LoadOtherScript/Tests/test_MainJobA.groovy")
 
     def result_test_MainJobA = test_MainJobA.test_suite(workspace_path, unique_id)
 

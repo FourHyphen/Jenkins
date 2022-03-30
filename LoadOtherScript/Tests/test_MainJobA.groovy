@@ -1,25 +1,29 @@
-def test_suite(def workspace_path, def unique_id) {
+def test_suite(String workspace_path, String unique_id) {
     // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
     // (pipeline ブロック残したままだと java.lang.IllegalStateException: Only one pipeline { ... } block can be executed in a single run.)
-    def test_script_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
+    String test_script_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
     create_script_without_pipeline_block("${workspace_path}/LoadOtherScript/MainJobA.groovy", test_script_path)
 
     // テスト用のスクリプトを load
-    script_MainJobA = load_script(test_script_path)
+    def script_MainJobA = load_script(test_script_path)
 
     return true
 }
 
-def create_script_without_pipeline_block(def original_path, def create_path) {
+def create_script_without_pipeline_block(String original_path, String create_path) {
     println("create_script_without_pipeline_block()")
 
     // pipeline ブロックなしのスクリプト本文を作成
-    def text = new File(original_path).getText()
-    def contents = exclude_pipeline_block(text)
+    String text = new File(original_path).getText()
+    String contents = exclude_pipeline_block(text)
 
     // pipeline ブロックなしのスクリプトファイルを保存
     new File(create_path).setText(contents)
     println("create: ${create_path}")
+}
+
+def read_file(String file_path) {
+    return new File(original_path).getText()
 }
 
 def exclude_pipeline_block(def text) {
@@ -32,8 +36,8 @@ def exclude_pipeline_block(def text) {
     return excluded
 }
 
-def load_script(def load_script_path) {
-    def script = load load_script_path
+def load_script(String load_script_path) {
+    def script = load(load_script_path)
     println("loaded")
     return script
 }
