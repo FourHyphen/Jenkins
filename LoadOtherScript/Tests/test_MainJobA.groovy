@@ -22,7 +22,7 @@ def create_script_without_pipeline_block(String original_path, String create_pat
 }
 
 def read_file(String file_path) {
-    return new File(original_path).getText()
+    return new File(file_path).getText()
 }
 
 def exclude_pipeline_block(String text) {
