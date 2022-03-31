@@ -40,7 +40,7 @@ def exclude_pipeline_block(String text) {
 def write_file(String file_path, String contents, String encoding="utf8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
-    String escaped = contents.replace("\r", "'r").replace("\n", "'n").replace("\t", "'t")
+    String escaped = contents.replace("\r", "`r").replace("\n", "`n").replace("\t", "`t")
     powershell(script: "Write-Output ${escaped} | Set-Content -Encoding ${encoding} ${file_path}")
 }
 
