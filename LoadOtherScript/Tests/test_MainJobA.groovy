@@ -37,12 +37,11 @@ def exclude_pipeline_block(String text) {
     return excluded
 }
 
-def write_file(String file_path, String contents, String encoding="utf8") {
+def write_file(String file_path, String contents, String encoding="utf-8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
     String script = """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
-        echo \$splited[0].ToString()
         \$sw = [System.IO.StreamWriter]::new(\"${file_path}\", \$false, [System.Text.Encoding]::GetEncoding("${encoding}"))
         foreach (\$line in \$splited)
         {
