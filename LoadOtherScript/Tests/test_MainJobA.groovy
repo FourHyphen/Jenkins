@@ -41,13 +41,13 @@ def write_file(String file_path, String contents, String encoding="utf8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
     String script = """
-        $splited = contents.Replace("\r", "").Split("\n")
-        $sw = New-Object System.IO.StreamWriter(${file_path}, \$false, [System.Text.Encoding]::GetEncoding("${encoding}"))
-        foreach ($line in $splited)
+        \$splited = contents.Replace("\r", "").Split("\n")
+        \$sw = New-Object System.IO.StreamWriter(${file_path}, \$false, [System.Text.Encoding]::GetEncoding("${encoding}"))
+        foreach (\$line in \$splited)
         {
-            $sw.WriteLine($line)
+            \$sw.WriteLine(\$line)
         }
-        $sw.Close()
+        \$sw.Close()
     """
     // powershell(script: "Write-Output ${escaped} | Set-Content -Encoding ${encoding} ${file_path}")
     powershell(script: script)
