@@ -40,7 +40,8 @@ def exclude_pipeline_block(String text) {
 def write_file(String file_path, String contents, String encoding="utf8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
-    powershell(script: "Write-Output ${contents} | Set-Content -Encoding ${encoding} ${file_path}")
+    String here_document = @"${contents}"
+    powershell(script: "Write-Output ${here_document} | Set-Content -Encoding ${encoding} ${file_path}")
 }
 
 def load_script(String load_script_path) {
