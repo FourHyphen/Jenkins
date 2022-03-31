@@ -42,7 +42,8 @@ def write_file(String file_path, String contents, String encoding="utf8") {
     // new File(file_path).setText(contents)
     String script = """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
-        \$sw = New-Object System.IO.StreamWriter(\"${file_path}\", \$false, [System.Text.Encoding]::GetEncoding("${encoding}"))
+        echo \$splited.ToString()
+        \$sw = [System.IO.StreamWriter]::new(\"${file_path}\", \$false, [System.Text.Encoding]::GetEncoding("${encoding}"))
         foreach (\$line in \$splited)
         {
             \$sw.WriteLine(\$line)
