@@ -37,10 +37,20 @@ def exclude_pipeline_block(String text) {
     return excluded
 }
 
-def write_file(String file_path, String contents, String encoding="utf8") {
+def write_file(String file_path, String contents, String encoding="utf-8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
-    powershell(script: "Write-Output ${contents} | Set-Content -Encoding ${encoding} ${file_path}")
+    String script = """
+        \$splited = \"${contents}\".Replace("\r", "").Split("\n")
+        \$sw = [System.IO.StreamWriter]::new(\"${file_path}\", \$false, [System.Text.Encoding]::GetEncoding("${encoding}"))
+        foreach (\$line in \$splited)
+        {
+            \$sw.WriteLine(\$line)
+        }
+        \$sw.Close()
+    """
+    // powershell(script: "Write-Output ${escaped} | Set-Content -Encoding ${encoding} ${file_path}")
+    powershell(script: script)
 }
 
 def load_script(String load_script_path) {
