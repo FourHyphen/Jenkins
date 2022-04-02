@@ -58,6 +58,7 @@ def create_ps_command_write_file(String file_path, String contents, String encod
         {
             \$sw.WriteLine(\$line)
         }
+        \$sw.WriteLine("return this")
         \$sw.Close()
     """
 }
