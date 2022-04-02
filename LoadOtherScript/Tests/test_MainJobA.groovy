@@ -7,9 +7,7 @@ def test_suite(String workspace_path, String unique_id) {
     // テスト用のスクリプトを load
     def script_MainJobA = load_script(test_script_path)
 
-    // java.lang.NullPointerException: Cannot get property 'g_value1' on null object
-    // println("g_value1: ${script_MainJobA.g_value1}")
-
+    println("g_value1: ${script_MainJobA.g_value1}")
     script_MainJobA.pre_process()
     println("g_value1: ${script_MainJobA.g_value1}")
 
