@@ -1,15 +1,15 @@
 def test_suite(String workspace_path, String unique_id) {
     // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
-    // (pipeline ブロック残したままだと java.lang.IllegalStateException: Only one pipeline { ... } block can be executed in a single run.)
+    // 注意点: BOM なしにすること(BOM ありだとスクリプトの最初の行が BOM バイト付きで処理され、しかも load でエラーしないので厄介)
     String test_script_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
     create_script_without_pipeline_block("${workspace_path}/LoadOtherScript/MainJobA.groovy", test_script_path)
 
     // テスト用のスクリプトを load
     def script_MainJobA = load_script(test_script_path)
 
-    println("g_value1: ${script_MainJobA.g_value1}")
+    println("g_value1: ${script_MainJobA.g_value1}")    // "g_value1: "
     script_MainJobA.pre_process()
-    println("g_value1: ${script_MainJobA.g_value1}")
+    println("g_value1: ${script_MainJobA.g_value1}")    // "g_value1: processed"
 
     return true
 }
@@ -55,6 +55,7 @@ def create_ps_command_write_file(String file_path, String contents, String encod
         if ("${encoding}".ToLower() -eq "utf-8") {
             # bom なし固定
             \$enc = [System.Text.UTF8Encoding]::new(\$false)
+            chcp 65001
         } else {
             \$enc = [System.Text.Encoding]::GetEncoding("${encoding}")
         }
