@@ -75,7 +75,7 @@ def create_ps_command_write_file(String file_path, String contents, String encod
         }
 
         # スクリプトが load 非対応の場合、return this を強制付与
-        if (\$${script_not_contains_return_this})
+        if (\$${script_not_contains_return_this}) {
             \$sw.WriteLine("return this")
         }
         \$sw.Close()
