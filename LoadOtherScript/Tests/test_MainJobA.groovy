@@ -23,6 +23,7 @@ def create_script_without_pipeline_block(String original_path, String create_pat
 
     String text = read_file(original_path)
     String contents = exclude_pipeline_block(text)
+    contents = add_return_this(contents)
     write_file(create_path, contents)
 
     println("create: ${create_path}")
@@ -44,6 +45,21 @@ def exclude_pipeline_block(String text) {
     return excluded
 }
 
+def add_return_this(String contents) {
+    // return this が存在しない場合、末尾に return this を追加する
+    def ret = contents
+    def matching = /(?m)^return/
+    Boolean script_contains_return_this = (contents ==~ matching)
+    if (!script_contains_return_this) {
+        ret += "\nreturn this\n"
+        println("not contains")
+    } else {
+        println("contains")
+    }
+
+    return ret
+}
+
 def write_file(String file_path, String contents, String encoding="utf-8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
@@ -52,9 +68,6 @@ def write_file(String file_path, String contents, String encoding="utf-8") {
 }
 
 def create_ps_command_write_file(String file_path, String contents, String encoding) {
-    def matching = /(?m)^return/
-    String script_not_contains_return_this = (!(contents ==~ matching)).toString()
-
     return """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
 
@@ -74,10 +87,6 @@ def create_ps_command_write_file(String file_path, String contents, String encod
             \$sw.WriteLine(\$line)
         }
 
-        # スクリプトが load 非対応の場合、return this を強制付与
-        if (\$${script_not_contains_return_this}) {
-            \$sw.WriteLine("return this")
-        }
         \$sw.Close()
     """
 }
