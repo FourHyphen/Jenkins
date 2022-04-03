@@ -28,10 +28,10 @@ def create_script_without_pipeline_block(String original_path, String create_pat
     println("create: ${create_path}")
 }
 
-def read_file(String file_path) {
+def read_file(String file_path, String encoding="UTF8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // return new File(file_path).getText()
-    return powershell(returnStdout: true, script: "Get-Content ${file_path}")
+    return powershell(returnStdout: true, script: "Get-Content -Encoding ${encoding} ${file_path}")
 }
 
 def exclude_pipeline_block(String text) {
