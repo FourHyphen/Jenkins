@@ -52,7 +52,7 @@ def create_ps_command_write_file(String file_path, String contents, String encod
     return """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
         \$enc = \$null
-        if (encoding == "utf-8") {
+        if (${encoding} == "utf-8") {
             # bom なし固定
             \$enc = [System.Text.UTF8Encoding]::new(\$false)
         } else {
