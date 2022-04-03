@@ -18,7 +18,7 @@ def test_suite(String workspace_path, String unique_id) {
 }
 
 def create_script_without_pipeline_block(String original_path, String create_path) {
-    // pipeline ブロックなしのスクリプト本文を作成し、保存する
+    // pipeline ブロックなし＆ return this ありのスクリプト本文を作成し、保存する
     println("create_script_without_pipeline_block()")
 
     String text = read_file(original_path)
@@ -48,8 +48,9 @@ def exclude_pipeline_block(String text) {
 def add_return_this(String contents) {
     // return this が存在しない場合、末尾に return this を追加する
     def ret = contents
-    def matching = /(?m)^return +this\r?\n/
-    if (!(contents =~ matching)) {
+
+    // ==~ 演算子は文字列の全てが正規表現にマッチする場合に初めて true になるので =~ で代替
+    if (!(contents =~ /(?m)^return +this\r?\n/)) {
         ret += "\nreturn this\n"
     }
 
