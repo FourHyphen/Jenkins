@@ -48,13 +48,9 @@ def exclude_pipeline_block(String text) {
 def add_return_this(String contents) {
     // return this が存在しない場合、末尾に return this を追加する
     def ret = contents
-    def matching = /(?m)^return/
-    Boolean script_contains_return_this = (contents ==~ matching)
-    if (!script_contains_return_this) {
+    def matching = /(?m)^return +this\r?\n/
+    if (!(contents =~ matching)) {
         ret += "\nreturn this\n"
-        println("not contains")
-    } else {
-        println("contains")
     }
 
     return ret
