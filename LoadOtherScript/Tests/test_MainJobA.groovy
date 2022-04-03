@@ -53,7 +53,7 @@ def write_file(String file_path, String contents, String encoding="utf-8") {
 
 def create_ps_command_write_file(String file_path, String contents, String encoding) {
     def matching = /(?m)^return +this(\t| )*\r?\n/
-    String script_not_contains_return_this = (!(text ==~ matching)).toString()
+    String script_not_contains_return_this = (!(contents ==~ matching)).toString()
 
     return """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
