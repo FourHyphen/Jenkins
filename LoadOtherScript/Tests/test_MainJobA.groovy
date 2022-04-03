@@ -7,10 +7,7 @@ def test_suite(String workspace_path, String unique_id) {
     // テスト用のスクリプトを load
     def script_MainJobA = load_script(test_script_path)
 
-    // groovy.lang.MissingPropertyException: No such property: g_value1 for class: groovy.lang.Binding
-    // def g_value1 = '' と def 追加したら...
     println("g_value1: ${script_MainJobA.g_value1}")
-
     script_MainJobA.pre_process()
     println("g_value1: ${script_MainJobA.g_value1}")
 
@@ -54,7 +51,15 @@ def write_file(String file_path, String contents, String encoding="utf-8") {
 def create_ps_command_write_file(String file_path, String contents, String encoding) {
     return """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
-        \$sw = [System.IO.StreamWriter]::new(\"${file_path}\", \$false, [System.Text.Encoding]::GetEncoding("${encoding}"))
+        \$enc = null
+        if (encoding == "utf-8") {
+            # bom なし固定
+            \$enc = [System.Text.UTF8Encoding]::new(\$false)
+        } else {
+            \$enc = [System.Text.Encoding]::GetEncoding("${encoding}")
+        }
+        \$sw = [System.IO.StreamWriter]::new(\"${file_path}\", \$false, \$enc)
+
         foreach (\$line in \$splited)
         {
             \$sw.WriteLine(\$line)
