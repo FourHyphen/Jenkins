@@ -53,7 +53,7 @@ def write_file(String file_path, String contents, String encoding="utf-8") {
 
 def create_ps_command_write_file(String file_path, String contents, String encoding) {
     def matching = /(?m)^return +this(\t| )*\r?\n/
-    Boolean script_not_contains_return_this = !(text ==~ matching)
+    String script_not_contains_return_this = (!(text ==~ matching)).toString()
 
     return """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
@@ -75,7 +75,7 @@ def create_ps_command_write_file(String file_path, String contents, String encod
         }
 
         # スクリプトが load 非対応の場合、return this を強制付与
-        if (\$${script_not_contains_return_this.toString()})
+        if (\$${script_not_contains_return_this})
             \$sw.WriteLine("return this")
         }
         \$sw.Close()
