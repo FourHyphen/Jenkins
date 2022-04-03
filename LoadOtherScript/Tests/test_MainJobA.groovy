@@ -23,6 +23,7 @@ def create_script_without_pipeline_block(String original_path, String create_pat
 
     String text = read_file(original_path)
     String contents = exclude_pipeline_block(text)
+    contents = add_return_this(contents)
     write_file(create_path, contents)
 
     println("create: ${create_path}")
@@ -42,6 +43,17 @@ def exclude_pipeline_block(String text) {
     def excluded = (text =~ matching)?.replaceAll("")
     println(excluded)
     return excluded
+}
+
+def add_return_this(String contents) {
+    // return this が存在しない場合、末尾に return this を追加する
+    def ret = contents
+    def matching = /(?m)^return +this\r?\n/
+    if (!(contents =~ matching)) {
+        ret += "\nreturn this\n"
+    }
+
+    return ret
 }
 
 def write_file(String file_path, String contents, String encoding="utf-8") {
@@ -70,7 +82,7 @@ def create_ps_command_write_file(String file_path, String contents, String encod
         {
             \$sw.WriteLine(\$line)
         }
-        \$sw.WriteLine("return this")
+
         \$sw.Close()
     """
 }
