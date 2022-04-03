@@ -21,3 +21,5 @@ def pre_process() {
     g_value1 = 'processed'
     println(g_value1)
 }
+
+return this
