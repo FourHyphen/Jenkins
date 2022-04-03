@@ -1,4 +1,4 @@
-g_value1 = ''
+def g_value1 = ''
 
 pipeline {
     agent any
