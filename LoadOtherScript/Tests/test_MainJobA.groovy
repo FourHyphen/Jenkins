@@ -51,7 +51,7 @@ def write_file(String file_path, String contents, String encoding="utf-8") {
 def create_ps_command_write_file(String file_path, String contents, String encoding) {
     return """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
-        \$enc = null
+        \$enc = \$null
         if (encoding == "utf-8") {
             # bom なし固定
             \$enc = [System.Text.UTF8Encoding]::new(\$false)
