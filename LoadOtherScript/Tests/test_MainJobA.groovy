@@ -32,6 +32,18 @@ def create_script_without_pipeline_block(String original_path, String create_pat
 def read_file(String file_path, String encoding="UTF8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // return new File(file_path).getText()
+    try {
+        return read_file_linux(file_path, encoding)
+    } catch (Exception e){
+        return read_file_windows(file_path, encoding)
+    }
+}
+
+def read_file_linux(String file_path, String encoding) {
+    return sh(returnStdout: true, script: "cat ${file_path}")
+}
+
+def read_file_windows(String file_path, String encoding) {
     return powershell(returnStdout: true, script: "Get-Content -Encoding ${encoding} ${file_path}")
 }
 
@@ -60,6 +72,28 @@ def add_return_this(String contents) {
 def write_file(String file_path, String contents, String encoding="utf-8") {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
+    try {
+        write_file_linux(file_path, contents, encoding)
+    } catch (Exception e) {
+        write_file_windows(file_path, contents, encoding)
+    }
+}
+
+def write_file_linux(String file_path, String contents, String encoding) {
+    String sh_command = create_sh_command_write_file(file_path, contents, encoding)
+    sh(script: sh_command)
+}
+
+def create_sh_command_write_file(String file_path, String contents, String encoding) {
+    String tmp_name = "tmp.groovy"
+    String sh_command = """
+    echo "{$contents}" > ${tmp_name}
+    iconv -t SJIS ${tmp_name} > ${file_path}
+    rm ${tmp_name}
+    """
+}
+
+def write_file_windows(String file_path, String contents, String encoding) {
     String ps_command = create_ps_command_write_file(file_path, contents, encoding)
     powershell(script: ps_command)
 }
