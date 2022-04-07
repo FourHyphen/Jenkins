@@ -1,8 +1,8 @@
 // 前提: Jenkins サーバーの文字コードが SJIS である
+// UTF8 に変更する場合、BOM なしにすること(BOM ありだとスクリプトの最初の行が BOM バイト付きで処理され、しかも load でエラーしないので厄介)
 
 def test_suite(String workspace_path, String unique_id) {
     // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
-    // 注意点: BOM なしにすること(BOM ありだとスクリプトの最初の行が BOM バイト付きで処理され、しかも load でエラーしないので厄介)
     String test_script_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
     create_script_without_pipeline_block("${workspace_path}/LoadOtherScript/MainJobA.groovy", test_script_path)
 
