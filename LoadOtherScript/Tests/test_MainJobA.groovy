@@ -1,5 +1,4 @@
-// 前提: Jenkins サーバーに以下システム環境変数を設定し、文字コードを UTF-8 にする
-// JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+// 前提: Jenkins サーバーの文字コードが SJIS である
 
 def test_suite(String workspace_path, String unique_id) {
     // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
@@ -29,22 +28,22 @@ def create_script_without_pipeline_block(String original_path, String create_pat
     println("create: ${create_path}")
 }
 
-def read_file(String file_path, String encoding="UTF8") {
+def read_file(String file_path) {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // return new File(file_path).getText()
     try {
-        return read_file_linux(file_path, encoding)
+        return read_file_linux(file_path)
     } catch (Exception e){
-        return read_file_windows(file_path, encoding)
+        return read_file_windows(file_path)
     }
 }
 
-def read_file_linux(String file_path, String encoding) {
+def read_file_linux(String file_path) {
     return sh(returnStdout: true, script: "cat ${file_path}")
 }
 
-def read_file_windows(String file_path, String encoding) {
-    return powershell(returnStdout: true, script: "Get-Content -Encoding ${encoding} ${file_path}")
+def read_file_windows(String file_path) {
+    return powershell(returnStdout: true, script: "Get-Content ${file_path}")
 }
 
 def exclude_pipeline_block(String text) {
@@ -69,22 +68,22 @@ def add_return_this(String contents) {
     return ret
 }
 
-def write_file(String file_path, String contents, String encoding="utf-8") {
+def write_file(String file_path, String contents) {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
     try {
-        write_file_linux(file_path, contents, encoding)
+        write_file_linux(file_path, contents)
     } catch (Exception e) {
-        write_file_windows(file_path, contents, encoding)
+        write_file_windows(file_path, contents)
     }
 }
 
-def write_file_linux(String file_path, String contents, String encoding) {
-    String sh_command = create_sh_command_write_file(file_path, contents, encoding)
+def write_file_linux(String file_path, String contents) {
+    String sh_command = create_sh_command_write_file(file_path, contents)
     sh(script: sh_command)
 }
 
-def create_sh_command_write_file(String file_path, String contents, String encoding) {
+def create_sh_command_write_file(String file_path, String contents) {
     String tmp_name = "tmp.groovy"
     String sh_command = """
     echo "{$contents}" > ${tmp_name}
@@ -93,23 +92,17 @@ def create_sh_command_write_file(String file_path, String contents, String encod
     """
 }
 
-def write_file_windows(String file_path, String contents, String encoding) {
-    String ps_command = create_ps_command_write_file(file_path, contents, encoding)
+def write_file_windows(String file_path, String contents) {
+    String ps_command = create_ps_command_write_file(file_path, contents)
     powershell(script: ps_command)
 }
 
-def create_ps_command_write_file(String file_path, String contents, String encoding) {
+def create_ps_command_write_file(String file_path, String contents) {
     return """
         \$splited = \"${contents}\".Replace("\r", "").Split("\n")
 
         # StreamWriter 構築
-        \$enc = \$null
-        if ("${encoding}".ToLower() -eq "utf-8") {
-            # bom なし固定
-            \$enc = [System.Text.UTF8Encoding]::new(\$false)
-        } else {
-            \$enc = [System.Text.Encoding]::GetEncoding("${encoding}")
-        }
+        \$enc = [System.Text.Encoding]::GetEncoding("SJIS")
         \$sw = [System.IO.StreamWriter]::new(\"${file_path}\", \$false, \$enc)
 
         # 1 行毎に記載することで powershell 用のエスケープを回避
