@@ -31,7 +31,7 @@ def test_pre_process(def jenkinsfile, def common) {
 
 def test_clone_fake(def jenkinsfile, def common) {
     // 実行
-    jenkinsfile.clone_fake()
+    jenkinsfile.clone_fake("value")
 
     // 事後条件
     def result = true
