@@ -1,6 +1,7 @@
 import groovy.transform.CompileStatic
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import org.codehaus.groovy.runtime.StackTraceUtils
 
 DO_STAGE = [
     'DO_STAGE_ENV':false,
@@ -16,8 +17,8 @@ DO_STAGE = [
     'DO_STAGE_REFLECTION':false,
     'DO_STAGE_ANNOTATION':false,
     'DO_STAGE_DATE':false,
-    'DO_STAGE_REGEX':true,
-    'DO_STAGE_OTHER':false,
+    'DO_STAGE_REGEX':false,
+    'DO_STAGE_OTHER':true,
     'DUMMY':false    // コピペが楽になるように
 ]
 
@@ -461,4 +462,34 @@ def try_regex() {
 def try_other() {
     String str = "str"
     out_console((str instanceof String).toString())    // true
+
+    try {
+        StackTraceElement current = Thread.currentThread().getStackTrace()[1]
+        println(current.getMethodName())    // "invoke0"
+    } catch (Exception e) {
+        println(e.toString())
+    }
+
+    try {
+        // import org.codehaus.groovy.runtime.StackTraceUtils
+        def current =  StackTraceUtils.sanitize(new Throwable()).getStackTrace()[0]
+        println(current.methodName)
+    } catch (Exception e) {
+        println(e.toString())
+    }
+
+    try {
+        println(get_method_name_question())
+    } catch (Exception e) {
+        println(e.toString())
+    }
+}
+
+def get_method_name_question() {
+    def current =  StackTraceUtils.sanitize(new Throwable()).getStackTrace()[0]
+    println("getStackTrace()[0].methodName: ${current.methodName}")
+
+    def before =  StackTraceUtils.sanitize(new Throwable()).getStackTrace()[1]
+    println("getStackTrace()[1].methodName: ${before.methodName}")
+    return before
 }
