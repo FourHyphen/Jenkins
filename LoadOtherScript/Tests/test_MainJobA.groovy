@@ -22,7 +22,7 @@ def test_pre_process(def jenkinsfile, def common) {
         result = false
     }
 
-    common.print_result(result, common.get_method_name())
+    common.print_result(result, "test_pre_process")
     return result
 }
 
