@@ -31,6 +31,13 @@ pipeline {
             }
         }
     }
+
+    post {
+        // 失敗したときは環境確認のためにワークスペースをそのまま残す
+        success {
+            deleteDir()
+        }
+    }
 }
 
 def test_init(String workspace_path) {
