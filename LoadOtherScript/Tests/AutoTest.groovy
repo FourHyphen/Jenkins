@@ -23,7 +23,9 @@ pipeline {
                     script {
                         def date = LocalDateTime.now()
                         def now = date.format(DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss'))
-                        currentResult = execute_test_suite(WORKSPACE, "${now}_${BUILD_ID}")
+                        if (!execute_test_suite(WORKSPACE, "${now}_${BUILD_ID}")) {
+                            error("test failed")
+                        }
                     }
                 }
             }
@@ -43,8 +45,8 @@ def execute_test_suite(String workspace_path, String unique_id) {
     def result_test_MainJobA = test_MainJobA.test_suite(workspace_path, unique_id, common)
 
     if (result_test_MainJobA) {
-        return 'SUCCESS'
+        return true
     } else {
-        return 'FAILURE'
+        return false
     }
 }
