@@ -92,14 +92,16 @@ def write_file_windows(String file_path, String contents) {
 }
 
 def create_ps_command_write_file(String file_path, String contents) {
+    String escaped = contents.replace("\"", "`\"")
+    println(escaped)
     return """
-        \$splited = \"${contents}\".Replace("\r", "").Split("\n")
+        \$splited = \"${escaped}\".Replace("\r", "").Split("\n")
 
         # StreamWriter 構築
         \$enc = [System.Text.Encoding]::GetEncoding("SJIS")
         \$sw = [System.IO.StreamWriter]::new(\"${file_path}\", \$false, \$enc)
 
-        # 1 行毎に記載することで powershell 用のエスケープを回避
+        # 1 行毎に記載することで powershell 用のエスケープをできるだけ回避
         foreach (\$line in \$splited)
         {
             \$sw.WriteLine(\$line)
