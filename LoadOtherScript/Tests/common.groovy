@@ -93,7 +93,6 @@ def write_file_windows(String file_path, String contents) {
 
 def create_ps_command_write_file(String file_path, String contents) {
     String escaped = contents.replace("\"", "`\"")
-    println(escaped)
     return """
         \$splited = \"${escaped}\".Replace("\r", "").Split("\n")
 
