@@ -1,3 +1,5 @@
+import org.codehaus.groovy.runtime.StackTraceUtils
+
 // 前提: Jenkins サーバーの文字コードが SJIS である
 // UTF8 に変更する場合、BOM なしにすること(BOM ありだとスクリプトの最初の行が BOM バイト付きで処理され、しかも load でエラーしないので厄介)
 
@@ -113,6 +115,30 @@ def load_script(String load_script_path) {
     def script = load(load_script_path)
     println("loaded")
     return script
+}
+
+def are_equals(def expected, def actual) {
+    if (expected == actual) {
+        return true
+    }
+
+    println("check NG...  expceted: ${expected} / actual: ${actual}")
+    return false
+}
+
+def print_result(Boolean result, String func_name) {
+    String res = result ? "OK" : "NG"
+    println("${func_name}...${res}")
+}
+
+def get_method_name(Integer back_stack_trace = 1) {
+    // back_stack_trace = 1 -> このメソッドを呼び出したメソッドの名前を返す
+    return get_stack_trace()[back_stack_trace].methodName
+}
+
+def get_stack_trace() {
+    // import org.codehaus.groovy.runtime.StackTraceUtils
+    return StackTraceUtils.sanitize(new Throwable()).getStackTrace()
 }
 
 return this
