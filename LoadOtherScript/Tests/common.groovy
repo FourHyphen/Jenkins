@@ -124,9 +124,9 @@ def are_equals(def expected, def actual) {
     return false
 }
 
-def print_result(Boolean result, String func_name) {
+def print_result(Boolean result, String method_name) {
     String res = result ? "OK" : "NG"
-    println("${func_name}...${res}")
+    println("${method_name}...${res}")
 }
 
 return this

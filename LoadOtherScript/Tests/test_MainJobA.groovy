@@ -4,8 +4,9 @@ def test_suite(String workspace_path, String unique_id, def common) {
     def jenkinsfile = common.load_script_edited_for_testing("${workspace_path}/LoadOtherScript/MainJobA.groovy", workspace_path, unique_id)
 
     def result_test_pre_process = test_pre_process(jenkinsfile, common)
+    def result_test_clone_fake = test_clone_fake(jenkinsfile, common)
 
-    if (result_test_pre_process) {
+    if (result_test_pre_process && result_test_clone_fake) {
         return true
     } else {
         return false
@@ -25,6 +26,21 @@ def test_pre_process(def jenkinsfile, def common) {
     }
 
     common.print_result(result, "test_pre_process")
+    return result
+}
+
+def test_clone_fake(def jenkinsfile, def common) {
+    // 実行
+    jenkinsfile.clone_fake()
+
+    // 事後条件
+    def result = true
+    if (!true) {
+        // 検証のため必ず失敗させる
+        result = false
+    }
+
+    common.print_result(result, "test_clone_fake")
     return result
 }
 
