@@ -35,7 +35,7 @@ def test_clone_fake(def jenkinsfile, def common) {
 
     // 事後条件
     def result = true
-    if (!true) {
+    if (true) {
         // 検証のため必ず失敗させる
         result = false
     }
