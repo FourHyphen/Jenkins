@@ -38,8 +38,9 @@ def test_init(String workspace_path) {
 
 def execute_test_suite(String workspace_path, String unique_id) {
     def test_MainJobA = load("${workspace_path}/LoadOtherScript/Tests/test_MainJobA.groovy")
+    def common = load("${workspace_path}/LoadOtherScript/Tests/common.groovy")
 
-    def result_test_MainJobA = test_MainJobA.test_suite(workspace_path, unique_id)
+    def result_test_MainJobA = test_MainJobA.test_suite(workspace_path, unique_id, common)
 
     if (result_test_MainJobA) {
         return 'SUCCESS'
