@@ -136,7 +136,7 @@ def are_equals(def expected, def actual) {
 }
 
 def is_contains(def list, def expected) {
-    if (list.contsins(expected)) {
+    if (list.contains(expected)) {
         return true
     }
 
