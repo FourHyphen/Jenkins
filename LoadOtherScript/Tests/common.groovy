@@ -94,7 +94,7 @@ def write_file_windows(String file_path, String contents, String workspace_path)
 }
 
 def create_ps_command_write_file(String file_path, String contents) {
-    String escaped = escape_ps(contents)
+    String escaped = escape_script(contents)
     return """
         \$splited = \"${escaped}\".Replace("\r", "").Split("\n")
 
@@ -112,7 +112,9 @@ def create_ps_command_write_file(String file_path, String contents) {
     """
 }
 
-def escape_ps(String str) {
+def escape_script(String str) {
+    // ` と " のエスケープ -> Windows Powershell のエスケープ
+    // $ のエスケープ -> groovy のエスケープ(これやらないと ps の $splited 作成時に ${} が展開されてしまう)
     return str.replace("`", "``").replace("\"", "`\"").replace("\$", "`\$")
 }
 
