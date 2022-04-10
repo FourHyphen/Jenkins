@@ -38,4 +38,5 @@ def clone_fake(String value) {
     println("${value}")
     println("${tmp}")
     println("finish clone(fake).")
+    return tmp
 }

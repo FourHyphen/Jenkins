@@ -4,20 +4,20 @@
 def load_script_edited_for_testing(String test_script_path, String workspace_path, String unique_id) {
     // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
     String script_edited_for_testing_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
-    create_script_edited_for_testing(test_script_path, script_edited_for_testing_path, workspace_path)
+    create_script_edited_for_testing(test_script_path, script_edited_for_testing_path, workspace_path, unique_id)
 
     // テスト用のスクリプトを load
     return load_script(script_edited_for_testing_path)
 }
 
-def create_script_edited_for_testing(String original_path, String create_path, String workspace_path) {
+def create_script_edited_for_testing(String original_path, String create_path, String workspace_path, String unique_id) {
     // テスト用に pipeline ブロックなし＆ return this ありのスクリプト本文を作成し、保存する
     println("create_script_edited_for_testing()")
 
     String text = read_file(original_path)
     String contents = exclude_pipeline_block(text)
     contents = add_return_this(contents)
-    write_file(create_path, contents, workspace_path)
+    write_file(create_path, contents, workspace_path, unique_id)
 
     println("create: ${create_path}")
 }
@@ -62,13 +62,13 @@ def add_return_this(String contents) {
     return ret
 }
 
-def write_file(String file_path, String contents, String workspace_path) {
+def write_file(String file_path, String contents, String workspace_path, String unique_id) {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
     try {
         write_file_linux(file_path, contents)
     } catch (Exception e) {
-        write_file_windows(file_path, contents, workspace_path)
+        write_file_windows(file_path, contents, workspace_path, unique_id)
     }
 }
 
@@ -86,11 +86,13 @@ def create_sh_command_write_file(String file_path, String contents) {
     """
 }
 
-def write_file_windows(String file_path, String contents, String workspace_path) {
+def write_file_windows(String file_path, String contents, String workspace_path, String unique_id) {
+    // 文字列エスケープが複雑なため、検証可能なよう ps1 を出力する
+    String ps_path = "${workspace_path}\\${unique_id}_to_create_jenkinsfile.ps1"
     String ps_command = create_ps_command_write_file(file_path, contents)
-    // デバッグ用
-    new File("${workspace_path}\\cmd.ps1").setText(ps_command)
-    powershell(script: "${workspace_path}\\cmd.ps1")
+    new File(ps_path).setText(ps_command)
+
+    powershell(script: "${ps_path}")
 }
 
 def create_ps_command_write_file(String file_path, String contents) {
