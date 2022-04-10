@@ -135,9 +135,23 @@ def are_equals(def expected, def actual) {
     return false
 }
 
+def is_contains(def list, def expected) {
+    if (list.contsins(expected)) {
+        return true
+    }
+
+    println("check NG...  expected: list contains ${expected} / actual: not contains")
+    return false
+}
+
 def print_result(Boolean result, String method_name) {
     String res = result ? "OK" : "NG"
     println("${method_name}...${res}")
+}
+
+def get_current_log(Integer lines_num) {
+    def log = currentBuild.rawBuild.getLog(lines_num)
+    return log
 }
 
 return this

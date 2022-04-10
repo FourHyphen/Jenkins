@@ -32,8 +32,11 @@ def test_pre_process(def jenkinsfile, def common) {
 def test_clone_fake(def jenkinsfile, def common) {
     def result = true
 
-    def actual = jenkinsfile.clone_fake("value")
-    if (!common.are_equals('''$"`'|%.:+=!?<>&@''', actual)) {
+    jenkinsfile.clone_fake("value")
+    def log = common.get_current_log(20)
+    println(log.getClass().toString())
+    println(log)
+    if (!common.is_contains(log, '''$"`'|%.:+=!?<>&@''')) {
         result = false
     }
 
