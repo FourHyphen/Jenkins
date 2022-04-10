@@ -150,8 +150,8 @@ def print_result(Boolean result, String method_name) {
 }
 
 def get_current_log(Integer lines_num) {
-    def log = currentBuild.rawBuild.getLog(lines_num)
-    return log
+    // return java.util.ArrayList
+    return currentBuild.rawBuild.getLog(lines_num)
 }
 
 return this
