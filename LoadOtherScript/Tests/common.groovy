@@ -4,20 +4,20 @@
 def load_script_edited_for_testing(String test_script_path, String workspace_path, String unique_id) {
     // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
     String script_edited_for_testing_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
-    create_script_edited_for_testing(test_script_path, script_edited_for_testing_path)
+    create_script_edited_for_testing(test_script_path, script_edited_for_testing_path, workspace_path)
 
     // テスト用のスクリプトを load
     return load_script(script_edited_for_testing_path)
 }
 
-def create_script_edited_for_testing(String original_path, String create_path) {
+def create_script_edited_for_testing(String original_path, String create_path, String workspace_path) {
     // テスト用に pipeline ブロックなし＆ return this ありのスクリプト本文を作成し、保存する
     println("create_script_edited_for_testing()")
 
     String text = read_file(original_path)
     String contents = exclude_pipeline_block(text)
     contents = add_return_this(contents)
-    write_file(create_path, contents)
+    write_file(create_path, contents, workspace_path)
 
     println("create: ${create_path}")
 }
@@ -62,13 +62,13 @@ def add_return_this(String contents) {
     return ret
 }
 
-def write_file(String file_path, String contents) {
+def write_file(String file_path, String contents, String workspace_path) {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // new File(file_path).setText(contents)
     try {
         write_file_linux(file_path, contents)
     } catch (Exception e) {
-        write_file_windows(file_path, contents)
+        write_file_windows(file_path, contents, workspace_path)
     }
 }
 
@@ -86,13 +86,15 @@ def create_sh_command_write_file(String file_path, String contents) {
     """
 }
 
-def write_file_windows(String file_path, String contents) {
+def write_file_windows(String file_path, String contents, String workspace_path) {
     String ps_command = create_ps_command_write_file(file_path, contents)
-    powershell(script: ps_command)
+    // デバッグ用
+    new File("${workspace_path}\\cmd.ps1").setText(ps_command)
+    powershell(script: "${workspace_path}\\cmd.ps1")
 }
 
 def create_ps_command_write_file(String file_path, String contents) {
-    String escaped = contents.replace("\"", "`\"")
+    String escaped = escape_ps(contents)
     return """
         \$splited = \"${escaped}\".Replace("\r", "").Split("\n")
 
@@ -108,6 +110,10 @@ def create_ps_command_write_file(String file_path, String contents) {
 
         \$sw.Close()
     """
+}
+
+def escape_ps(String str) {
+    return str.replace("`", "``").replace("\"", "`\"").replace("\$", "`\$")
 }
 
 def load_script(String load_script_path) {

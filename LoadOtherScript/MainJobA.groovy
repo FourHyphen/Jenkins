@@ -33,7 +33,9 @@ def pre_process() {
 }
 
 def clone_fake(String value) {
+    String tmp = '''$"`'|%.:+=!?<>&@'''
     println("start clone(fake).")
     println("${value}")
+    println("${tmp}")
     println("finish clone(fake).")
 }
