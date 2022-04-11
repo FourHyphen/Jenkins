@@ -149,6 +149,10 @@ def print_result(Boolean result, String method_name) {
     println("${method_name}...${res}")
 }
 
+def did_success_all(List results) {
+    return results.count(false) == 0
+}
+
 def get_current_log(Integer lines_num) {
     // return java.util.ArrayList
     return currentBuild.rawBuild.getLog(lines_num)

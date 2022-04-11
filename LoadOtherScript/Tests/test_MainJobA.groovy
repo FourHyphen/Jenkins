@@ -3,14 +3,13 @@ def test_suite(String workspace_path, String unique_id, def common) {
     // テスト用のスクリプトを load
     def jenkinsfile = common.load_script_edited_for_testing("${workspace_path}/LoadOtherScript/MainJobA.groovy", workspace_path, unique_id)
 
-    def result_test_pre_process = test_pre_process(jenkinsfile, common)
-    def result_test_clone_fake = test_clone_fake(jenkinsfile, common)
+    // テスト実施
+    List results = []
+    results.add(test_pre_process(jenkinsfile, common))
+    results.add(test_clone_fake(jenkinsfile, common))
 
-    if (result_test_pre_process && result_test_clone_fake) {
-        return true
-    } else {
-        return false
-    }
+    // 結果確認
+    return common.did_success_all(results)
 }
 
 def test_pre_process(def jenkinsfile, def common) {
