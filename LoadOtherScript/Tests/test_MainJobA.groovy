@@ -23,7 +23,7 @@ def test_pre_process(def jenkinsfile, def common) {
     def result = true
     // Jenkins ではこの呼び方は NG だった
     // if (!common.are_equals(expected: "processed", actual: jenkinsfile.g_value1)) {
-    if (!common.are_equals("processed", jenkinsfile.g_value1)) {
+    if (!common.are_equals("processed(other_branch)", jenkinsfile.g_value1)) {
         result = false
     }
 

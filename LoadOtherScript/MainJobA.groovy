@@ -28,7 +28,7 @@ pipeline {
 
 def pre_process() {
     // 初期設定
-    g_value1 = 'processed'
+    g_value1 = 'processed(other_branch)'
     println(g_value1)
 }
 
