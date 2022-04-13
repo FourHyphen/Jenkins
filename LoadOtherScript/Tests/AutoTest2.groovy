@@ -21,7 +21,7 @@ pipeline {
             steps {
                 wrap([$class: 'TimestamperBuildWrapper']) {
                     script {
-                        clone(REPOSITORY_URL, TEST_BRANCH, CREDENTIALS_ID, WORKSPACE)
+                        clone(WORKSPACE, REPOSITORY_URL, CREDENTIALS_ID, TEST_BRANCH, COMMIT_ID)
                     }
                 }
             }
@@ -58,21 +58,31 @@ def test_init(String workspace_path) {
     }
 }
 
-def clone(String repositoryUrl, String branch, String credentialsId, String workspace_path) {
+def clone(String workspace_path, String repository_url, String credentials_id, String branch, String commit_id) {
     dir(workspace_path) {
-        clone_core(repositoryUrl, branch, credentialsId)
+        clone_core(repository_url, credentials_id, branch, commit_id)
     }
 }
 
-def clone_core(String repositoryUrl, String branch, String credentialsId) {
+def clone_core(String repository_url, String credentials_id, String branch, String commit_id) {
+    String branches_name = "refs/heads/${branch}"
+    if (commit_id != "") {
+        branches_name = commit_id
+    }
+
+    checkout_core(repository_url, credentials_id, branches_name)
+}
+
+def checkout_core(String repository_url, String credentials_id, String branches_name) {
+    println("checkout: ${repository_url} / branches_name: ${branches_name}")
     checkout([
         $class: 'GitSCM', 
-        branches: [[name: "*/${branch}"]], 
+        branches: [[name: "${branches_name}"]], 
         doGenerateSubmoduleConfigurations: false, 
         extensions: [[$class: 'CleanCheckout']], 
         submoduleCfg: [], 
-        userRemoteConfigs: [[credentialsId: "${credentialsId}",
-                             url: "${repositoryUrl}"]]
+        userRemoteConfigs: [[credentials_id: "${credentials_id}",
+                             url: "${repository_url}"]]
     ])
 }
 
