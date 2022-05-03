@@ -1,0 +1,75 @@
+// test_target_jenkinsfile -> テスト対象 jenkinsfile の load 結果
+// common -> common.jenkinsfile の load 結果
+def test_suite(def test_target_jenkinsfile, def common) {
+    // テスト実施
+    List results = []
+    results.add(test_pre_process(test_target_jenkinsfile, common))
+    results.add(test_convert_path_table(test_target_jenkinsfile, common))
+
+    // 結果確認
+    return common.did_success_all(results)
+}
+
+def test_pre_process(def jenkinsfile, def common) {
+    def set_str = 'test str'
+    jenkinsfile.pre_process(set_str)
+
+    Boolean result = true
+    if (!common.are_equals('test str', jenkinsfile.g_value1)) {
+        result = false
+    }
+
+    def log = common.get_current_log(10)
+    println(log)
+    if (!common.is_contains(log, '''$"`'|%.:+=!?<>&@''')) {
+        result = false
+    }
+
+    common.print_result(result, "test_pre_process")
+    return result
+}
+
+def test_convert_path_table(def jenkinsfile, def common) {
+    String tsv =
+'''
+ID	TMP	UNC
+//172.168.111.1/dir1	tmp	\\\\server1\\root\\share11\\folder
+//172.168.2.222/dir2	tmp	\\\\server2\\root\\share22\\folder
+'''
+    Boolean result = true
+
+    // 対応表として有効な行だけを読むことの確認
+    List path_tables = jenkinsfile.convert_path_table_string_to_list(tsv)
+    if (!common.are_equals(2, path_tables.size())) {
+        result = false
+    }
+
+    // 中身の確認([1] が問題ないなら [0] も問題ないと判断、[1] のみ確認)
+    if (!common.are_equals("//172.168.2.222/dir2", path_tables[1].ip_mount_path) ||
+        !common.are_equals("\\\\server2\\root\\share22\\folder", path_tables[1].unc_mount_path) ||
+        !common.are_equals("22", path_tables[1].share_num)) {
+        result = false
+    }
+
+    // Windows UNC path の変換処理
+    String unc_path = "\\\\server1\\root\\share11\\folder\\relative\\file_name"
+    String converted = jenkinsfile.convert_path(path_tables, unc_path)
+    if (!common.are_equals('//172.168.111.1/dir1/relative/file_name', converted)) {
+        result = false
+    }
+
+    // 入力ミス等による存在しないパスの場合は error を上げることの確認
+    String not_found_path = "\\\\server_not_found\\root\\share00\\folder\\relative\\file_name"
+    try {
+        converted = jenkinsfile.convert_path(path_tables, not_found_path)
+        println("expected: exception occured / actual: not exception")
+        result = false
+    } catch (Exception e) {
+        // OK
+    }
+
+    common.print_result(result, "test_convert_path_table")
+    return result
+}
+
+return this

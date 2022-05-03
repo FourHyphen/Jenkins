@@ -1,0 +1,100 @@
+g_value1 = ''
+
+class PathTable {
+    String ip_mount_path = null
+    String unc_mount_path = null
+    String share_num = null
+}
+
+PATH_TABLE_DATA =
+'''
+ID	TMP	UNC
+//172.168.111.1/dir1	tmp	\\\\server1\\root\\share11\\folder
+//172.168.2.222/dir2	tmp	\\\\server2\\root\\share22\\folder
+'''
+
+g_path_tables = null
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Pre') {
+            steps {
+                timestamps {
+                    script {
+                        pre_process("tmp")
+                    }
+                }
+            }
+        }
+
+        stage('Path convert') {
+            steps {
+                timestamps {
+                    script {
+                        g_path_tables = convert_path_table_string_to_list(PATH_TABLE_DATA)
+                        convert_path(g_path_tables, "\\\\server1\\root\\share11\\folder\\relative\\file_name")
+                    }
+                }
+            }
+        }
+    }
+}
+
+def pre_process(String value) {
+    g_value1 = value
+    println(g_value1)
+
+    String tmp = '''$"`'|%.:+=!?<>&@'''
+    println("${tmp}")
+}
+
+def convert_path_table_string_to_list(String tsv_data) {
+    def format = tsv_data.replace("\r", "").split("\n")
+
+    List path_tables = []
+    // 改行のみの行や Windows UNC パスを含まない行は対応表として不適切なので除外
+    format.findAll { it.count("\t") == 2 && it.contains("\\\\") }
+          .each {
+        def line_elems = it.split("\t")
+        PathTable pt = create_path_table(line_elems)
+        path_tables.add(pt)
+    }
+
+    return path_tables
+}
+
+def create_path_table(def line_elems) {
+    PathTable pt = new PathTable()
+    pt.ip_mount_path = line_elems[0]
+    pt.unc_mount_path = line_elems[2]
+    pt.share_num = get_share_num(pt.unc_mount_path)
+    return pt
+}
+
+def get_share_num(String unc_mount_path) {
+    // "share**" の "**" 数字箇所を文字列として返す
+    // 例) マッチ結果 -> [share11, 11], return "11"
+    // return it[1] は matcher オブジェクトを返すように見えるのでこの方法
+    String num = ""
+    (unc_mount_path =~ /share([0-9]+)/)?.each {
+        num = it[1]
+    }
+
+    return num
+}
+
+def convert_path(List path_tables, String windows_unc_path) {
+    PathTable pt = path_tables.find { windows_unc_path.contains(it.unc_mount_path) }
+    if (pt == null) {
+        error("Path-table does not contain ${windows_unc_path}")
+    }
+
+    String converted = windows_unc_path.replace(pt.unc_mount_path, pt.ip_mount_path)
+    return to_unix_path(converted)
+}
+
+def to_unix_path(String windows_path) {
+    return windows_path?.replace('\\', '/')
+}

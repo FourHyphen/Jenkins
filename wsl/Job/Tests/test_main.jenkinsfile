@@ -1,0 +1,90 @@
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+g_test_target_jenkinsfile = null
+g_test_suite_jenkinsfile = null
+g_common_jenkinsfile = null
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Init') {
+            steps {
+                timestamps {
+                    script {
+                        test_init(WORKSPACE)
+                    }
+                }
+            }
+        }
+
+        stage('Load test script') {
+            steps {
+                timestamps {
+                    script {
+                        load_test_script(TEST_TARGET_JENKINSFILE_PATH,
+                                         TEST_SUITE_JENKINSFILE_PATH,
+                                         COMMON_JENKINSFILE_PATH,
+                                         WORKSPACE)
+                    }
+                }
+            }
+        }
+
+        stage('Execute') {
+            steps {
+                timestamps {
+                    script {
+                        execute_test_suite(g_test_target_jenkinsfile, g_test_suite_jenkinsfile, g_common_jenkinsfile)
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        // 失敗したときは環境確認のためにワークスペースをそのまま残す
+        success {
+            deleteDir()
+        }
+    }
+}
+
+def test_init(String workspace_path) {
+    try {
+        sh("ls -l")
+    } catch (Exception e) {
+        powershell("dir ${workspace_path}")
+    }
+}
+
+def load_test_script(String test_target_jenkinsfile_path,
+                     String test_suite_jenkinsfile_path,
+                     String common_jenkinsfile_path,
+                     String workspace_path) {
+    g_test_suite_jenkinsfile = load("${test_suite_jenkinsfile_path}")
+    g_common_jenkinsfile = load("${common_jenkinsfile_path}")
+
+    String unique_id = get_unique_id()
+    g_test_target_jenkinsfile = g_common_jenkinsfile.load_script_edited_for_testing(test_target_jenkinsfile_path, workspace_path, unique_id)
+}
+
+def get_unique_id() {
+    def date = LocalDateTime.now()
+    def now = date.format(DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss'))
+    return "${now}_${BUILD_ID}"
+}
+
+def execute_test_suite(def test_target_jenkinsfile,
+                       def test_suite_jenkinsfile,
+                       def common_jenkinsfile) {
+    Boolean result = test_suite_jenkinsfile.test_suite(test_target_jenkinsfile, common_jenkinsfile)
+    if (result) {
+        println("test success.")
+    } else {
+        error("test failed")
+    }
+
+    return result
+}
