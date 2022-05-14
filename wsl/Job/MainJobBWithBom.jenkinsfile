@@ -1,0 +1,22 @@
+﻿g_value1 = ''
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Pre') {
+            steps {
+                timestamps {
+                    script {
+                        pre_process("tmp")
+                    }
+                }
+            }
+        }
+    }
+}
+
+def pre_process(String value) {
+    g_value1 = value
+    println("${g_value1}_${g_value1}")
+}

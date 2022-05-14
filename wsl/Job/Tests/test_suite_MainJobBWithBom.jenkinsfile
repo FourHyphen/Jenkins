@@ -1,0 +1,31 @@
+// test_target_jenkinsfile -> テスト対象 jenkinsfile の load 結果
+// common -> common.jenkinsfile の load 結果
+def test_suite(def test_target_jenkinsfile, def common) {
+    // テスト実施
+    List results = []
+    results.add(test_pre_process(test_target_jenkinsfile, common))
+
+    // 結果確認
+    return common.did_success_all(results)
+}
+
+def test_pre_process(def jenkinsfile, def common) {
+    def set_str = 'test str'
+    jenkinsfile.pre_process(set_str)
+
+    Boolean result = true
+    if (!common.are_equals('test str', jenkinsfile.g_value1)) {
+        result = false
+    }
+
+    def log = common.get_current_log(10)
+    println(log)
+    if (!common.is_contains(log, "${set_str}_${set_str}")) {
+        result = false
+    }
+
+    common.print_result(result, "test_pre_process")
+    return result
+}
+
+return this

@@ -11,11 +11,13 @@ def load_script_edited_for_testing(String test_script_path, String workspace_pat
 }
 
 def create_script_edited_for_testing(String original_path, String create_path) {
-    // テスト用に pipeline ブロックなし＆ return this ありのスクリプト本文を作成し、UTF-8(BOM なし) で保存する
+    // テスト用に pipeline ブロックなし＆ return this ありのスクリプト本文を作成し、保存する
     String text = read_file(original_path)
     String contents = exclude_pipeline_block(text)
     contents = add_return_this(contents)
-    write_file_no_bom(create_path, contents)
+    writeFile(file: create_path, text: contents)
+
+    sh("cat ${create_path}")
 
     // println(contents)
     println("create: ${create_path} ... OK")
@@ -25,14 +27,15 @@ def read_file(String file_path) {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
     // return new File(file_path).getText()
     try {
-        return read_file_linux(file_path)
+        // BOM なしで読み込む
+        return read_file_linux_without_bom(file_path)
     } catch (Exception e){
         return read_file_windows(file_path)
     }
 }
 
-def read_file_linux(String file_path) {
-    return sh(returnStdout: true, script: "cat ${file_path}")
+def read_file_linux_without_bom(String file_path) {
+    return sh(returnStdout: true, script: "cat ${file_path} | sed -s -e '1s/^\\xef\\xbb\\xbf//'")
 }
 
 def read_file_windows(String file_path) {
@@ -57,10 +60,6 @@ def add_return_this(String contents) {
     }
 
     return ret
-}
-
-def write_file_no_bom(String file_path, String contents) {
-    writeFile(file: file_path, text: contents)
 }
 
 def load_script(String load_script_path) {
