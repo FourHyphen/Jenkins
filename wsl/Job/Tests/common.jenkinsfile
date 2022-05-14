@@ -2,7 +2,7 @@
 // UTF8 に変更する場合、BOM なしにすること(BOM ありだとスクリプトの最初の行が BOM バイト付きで処理され、しかも load でエラーしないので厄介)
 
 def load_script_edited_for_testing(String test_script_path, String workspace_path, String unique_id) {
-    // テスト用に pipeline ブロックを除いたスクリプトファイルを作成
+    // テスト用に pipeline ブロックを除いた、UTF-8(BOM なし)スクリプトファイルを作成
     String script_edited_for_testing_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
     create_script_edited_for_testing(test_script_path, script_edited_for_testing_path)
 
@@ -11,11 +11,11 @@ def load_script_edited_for_testing(String test_script_path, String workspace_pat
 }
 
 def create_script_edited_for_testing(String original_path, String create_path) {
-    // テスト用に pipeline ブロックなし＆ return this ありのスクリプト本文を作成し、保存する
+    // テスト用に pipeline ブロックなし＆ return this ありのスクリプト本文を作成し、UTF-8(BOM なし) で保存する
     String text = read_file(original_path)
     String contents = exclude_pipeline_block(text)
     contents = add_return_this(contents)
-    writeFile(file: create_path, text: contents)
+    write_file_no_bom(create_path, contents)
 
     // println(contents)
     println("create: ${create_path} ... OK")
@@ -57,6 +57,10 @@ def add_return_this(String contents) {
     }
 
     return ret
+}
+
+def write_file_no_bom(String file_path, String contents) {
+    writeFile(file: file_path, text: contents)
 }
 
 def load_script(String load_script_path) {
