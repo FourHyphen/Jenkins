@@ -1,0 +1,62 @@
+/*
+想定ジョブ構成
+Jenkins: ジョブのトップ場所
+ -> test_suite_job
+ -> unit_test_***
+ -> unit_test_...
+ -> ...
+*/
+
+import groovy.json.*
+
+g_jenkins_unit_test_folder_url = 'http://localhost:8080/job/test_suite/'
+g_jenkins_user_name = "admin"
+g_jenkins_user_password = "admin"
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Test execute') {
+            steps {
+                timestamps {
+                    script {
+                        execute_all_unit_test(g_jenkins_user_name,
+                                              g_jenkins_user_password,
+                                              g_jenkins_unit_test_folder_url)
+                    }
+                }
+            }
+        }
+    }
+}
+
+def execute_all_unit_test(String jenkins_user_name, String jenkins_user_password, String jenkins_unit_test_folder_url) {
+    def json = get_unit_test_folder_json(jenkins_user_name, jenkins_user_password, jenkins_unit_test_folder_url)
+    List unit_test_job_names = get_unit_test_job_names(json)
+    execute_all_unit_test_job(unit_test_job_names)
+}
+
+def get_unit_test_folder_json(String jenkins_user_name, String jenkins_user_password, String jenkins_unit_test_folder_url) {
+    String json_str = sh(returnStdout: true, script: "curl -u ${jenkins_user_name}:${jenkins_user_password} ${jenkins_unit_test_folder_url}api/json")
+
+    // JsonSlurper は内部的には遅延 Map でマルチスレッド NG のため Classic を使用
+    return new JsonSlurperClassic().parseText(json_str)
+}
+
+def get_unit_test_job_names(def json) {
+    List names = []
+    json.jobs.each {
+        if (it.name.contains("unit_test")) {
+            names.add(it.name)
+        }
+    }
+
+    return names
+}
+
+def execute_all_unit_test_job(List unit_test_job_names) {
+    unit_test_job_names.each {
+        build(job: it)
+    }
+}
