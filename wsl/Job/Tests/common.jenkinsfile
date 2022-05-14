@@ -3,7 +3,7 @@
 
 def load_script_edited_for_testing(String test_script_path, String workspace_path, String unique_id) {
     // テスト用に pipeline ブロックを除いた、UTF-8(BOM なし)スクリプトファイルを作成
-    String script_edited_for_testing_path = "${workspace_path}/${unique_id}_MainJobA.groovy"
+    String script_edited_for_testing_path = "${workspace_path}/${unique_id}.groovy"
     create_script_edited_for_testing(test_script_path, script_edited_for_testing_path)
 
     // テスト用のスクリプトを load
