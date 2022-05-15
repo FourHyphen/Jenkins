@@ -1,12 +1,3 @@
-/*
-想定ジョブ構成
-Jenkins: ジョブのトップ場所
- -> test_suite_job
- -> unit_test_***
- -> unit_test_...
- -> ...
-*/
-
 import groovy.json.*
 
 g_jenkins_unit_test_folder_url = 'http://localhost:8080/job/test_suite/'
@@ -33,7 +24,7 @@ pipeline {
 
 def execute_all_unit_test(String jenkins_user_name, String jenkins_user_password, String jenkins_unit_test_folder_url) {
     def json = get_unit_test_folder_json(jenkins_user_name, jenkins_user_password, jenkins_unit_test_folder_url)
-    List unit_test_job_names = get_unit_test_job_names(json)
+    List unit_test_job_names = collect_unit_test_job_names(json)
     execute_all_unit_test_job(unit_test_job_names)
 }
 
@@ -44,15 +35,9 @@ def get_unit_test_folder_json(String jenkins_user_name, String jenkins_user_pass
     return new JsonSlurperClassic().parseText(json_str)
 }
 
-def get_unit_test_job_names(def json) {
-    List names = []
-    json.jobs.each {
-        if (it.name.contains("unit_test")) {
-            names.add(it.name)
-        }
-    }
-
-    return names
+def collect_unit_test_job_names(def json) {
+    return json.jobs.findAll { it.name.contains("unit_test") }
+                    .collect { it.name }
 }
 
 def execute_all_unit_test_job(List unit_test_job_names) {
