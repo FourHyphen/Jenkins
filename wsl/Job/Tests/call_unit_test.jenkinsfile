@@ -86,6 +86,7 @@ def init(String test_suite_jenkinsfile_path,
          String test_target_jenkinsfile_path,
          String common_jenkinsfile_path,
          String workspace_path) {
+    println("workspace: ${workspace_path}")
     try {
         sh("ls -l")
     } catch (Exception e) {

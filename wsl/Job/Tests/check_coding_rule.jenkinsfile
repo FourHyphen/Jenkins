@@ -1,39 +1,57 @@
+g_check_coding_rule_debug = false
+
 def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
     String text = common_jenkinsfile.read_file(jenkinsfile_path)
 
     // (?m) -> 複数行マッチモード(^ が改行文字直後の行頭にマッチする)
     // (?s) -> DotAll モード(. が改行文字にもマッチする)
     boolean result = true
+    boolean during_string_single_quote = false
+    boolean during_string_double_quote = false
     int line_num = 0
 
     for(String line in text.split("\n")) {
         line_num++
 
-        // インデントチェック(複数行に渡る場合の整形もあるので NG にはしない)
-        check_indent(line, line_num)
-
-        // クラス定義開始行
-        if ((line =~ /^class /)) {
-            println("debug: class: ${line}")
-            if (!is_match_class_format(line, line_num)) {
-                result = false
+        // ''' や """ で括られている間の行の場合、その括りの終了を確認(規約は見ない)
+        if (during_string_single_quote) {
+            if (num_of_single_quote_triple(line) == 1) {
+                during_string_single_quote = false
+                println("line ${line_num} : ''' end  : ${line}")
+            } else {
+                debug_dump("'''      : ${line}")
             }
+            continue
         }
 
-        // 関数定義開始行
-        if ((line =~ /^def /)) {
-            println("debug: func: ${line}")
-            if (!is_match_func_format(line, line_num)) {
-                result = false
+        if (during_string_double_quote) {
+            if (num_of_single_double_triple(line) == 1) {
+                during_string_double_quote = false
+                println("line ${line_num} : \"\"\" end  : ${line}")
+            } else {
+                debug_dump("\"\"\"      : ${line}")
             }
+            continue
         }
 
-        // グローバル定数定義行
-        if ((line =~ /^[A-Z].+?=/)) {
-            println("debug: global constant: ${line}")
-            if (!is_match_global_constant(line, line_num)) {
+        int indent_num = get_indent_num(line)
+        if (indent_num == 0) {
+            // インデントなしなら何らかの定義行
+            if (!is_ok_define(line, line_num)) {
                 result = false
             }
+        } else {
+            // インデントチェック(複数行に渡る場合の整形もあるので NG にはしない)
+            is_ok_indent_num(line, indent_num, line_num)
+        }
+
+        // ''' や """ で括り始める行の場合、その括りの終了までチェックしないようフラグ立て
+        if (num_of_single_quote_triple(line) == 1) {
+            during_string_single_quote = true
+            println("line ${line_num} : ''' start: ${line}")
+        } else if (num_of_double_quote_triple(line) == 1) {
+            during_string_double_quote = true
+            println("line ${line_num} : \"\"\" start: ${line}")
         }
     }
 
@@ -41,19 +59,71 @@ def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
     return result
 }
 
-def check_indent(String line, int line_num) {
+def num_of_single_quote_triple(String line) {
+    def triple_match = /'''/
+    return match_num(triple_match, line)
+}
+
+def num_of_double_quote_triple(String line) {
+    def triple_match = /"""/
+    return match_num(triple_match, line)
+}
+
+def match_num(def regex, String str) {
+    return (str =~ regex).size()
+}
+
+def debug_dump(String str) {
+    if (g_check_coding_rule_debug) {
+        println("[DEBUG] ${str}")
+    }
+}
+
+def get_indent_num(String line) {
     def indent_match = /^( )*/
-    if (line[0] == " ") {
-        int indent_num = (line =~ indent_match)[0][0].length()
-        if (indent_num % 4 != 0) {
-            println("warn: line ${line_num}: ${line}\n    indent.length() = ${indent_num}")
+    return (line =~ indent_match)[0][0].length()
+}
+
+def is_ok_indent_num(String line, int indent_num, int line_num) {
+    if (indent_num % 4 != 0) {
+        println("[WARN] line ${line_num}: ${line}\n    indent.length() = ${indent_num}")
+        return false
+    }
+
+    return true
+}
+
+def is_ok_define(String line, int line_num) {
+    // クラス定義開始行
+    if ((line =~ /^class /)) {
+        debug_dump("class: ${line}")
+        if (!is_match_class_format(line, line_num)) {
+            return false
         }
     }
+
+    // 関数定義開始行
+    if ((line =~ /^def /)) {
+        debug_dump("func: ${line}")
+        if (!is_match_func_format(line, line_num)) {
+            return false
+        }
+    }
+
+    // グローバル定数定義行
+    if ((line =~ /^[A-Z].+?=/)) {
+        debug_dump("global constant: ${line}")
+        if (!is_match_global_constant(line, line_num)) {
+            return false
+        }
+    }
+
+    return true
 }
 
 def is_match_class_format(String line, int line_num) {
     if (!(line =~ /^class [A-Z][^_ ]+ \{$/)) {
-        println("warn: line ${line_num}: ${line}\n    class format -> ^class [A-Z][^_ ]+ {\$")
+        println("[ERROR] line ${line_num}: ${line}\n    class format -> ^class [A-Z][^_ ]+ {\$")
         return false
     }
 
@@ -61,17 +131,25 @@ def is_match_class_format(String line, int line_num) {
 }
 
 def is_match_func_format(String line, int line_num) {
+    boolean result = true
+    // 関数名や小かっこ
     if (!(line =~ /^def [^A-Z]+(.*) \{$/)) {
-        println("warn: line ${line_num}: ${line}\n    func format -> ^def [^A-Z]+(.*) {\$")
-        return false
+        println("[ERROR] line ${line_num}: ${line}\n    func format -> ^def [^A-Z]+(.*) {\$")
+        result = false
     }
 
-    return true
+    // 小かっこ内、引数箇所
+    // if (!(line =~ /(.*)/)) {
+    //     println("[ERROR] line ${line_num}: ${line}\n    func format -> ^def [^A-Z]+(.*) {\$")
+    //     result = false
+    // }
+
+    return result
 }
 
 def is_match_global_constant(String line, int line_num) {
     if (!(line =~ /^[A-Z][A-Z0-9_]+ += +/) && !(line =~ /^[A-Z][A-Z0-9_]+ +=$/)) {
-        println("warn: line ${line_num}: ${line}\n    global constant format -> ^[A-Z][A-Z0-9_]+ += +")
+        println("[ERROR] line ${line_num}: ${line}\n    global constant format -> ^[A-Z][A-Z0-9_]+ += +")
         return false
     }
 
