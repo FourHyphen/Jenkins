@@ -1,9 +1,11 @@
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+g_edited_for_testing_jenkinsfile_path = null
 g_test_target_jenkinsfile = null
 g_test_suite_jenkinsfile = null
 g_common_jenkinsfile = null
+g_coding_rule_jenkinsfile = null
 
 pipeline {
     agent any
@@ -13,7 +15,36 @@ pipeline {
             steps {
                 timestamps {
                     script {
-                        test_init(WORKSPACE)
+                        init(TEST_SUITE_JENKINSFILE_PATH,
+                             TEST_TARGET_JENKINSFILE_PATH,
+                             COMMON_JENKINSFILE_PATH,
+                             WORKSPACE)
+                    }
+                }
+            }
+        }
+
+        stage('Create test script') {
+            steps {
+                timestamps {
+                    script {
+                        create_test_script(TEST_TARGET_JENKINSFILE_PATH,
+                                           g_edited_for_testing_jenkinsfile_path)
+                    }
+                }
+            }
+        }
+
+        stage('Check coding rule') {
+            steps {
+                // コーディング規約に違反していてもテストは可能なのでジョブを止めない
+                catchError(stageResult: 'FAILURE') {
+                    timestamps {
+                        script {
+                            is_applied_coding_rule(TEST_TARGET_JENKINSFILE_PATH,
+                                                   g_coding_rule_jenkinsfile,
+                                                   g_common_jenkinsfile)
+                        }
                     }
                 }
             }
@@ -23,20 +54,20 @@ pipeline {
             steps {
                 timestamps {
                     script {
-                        load_test_script(TEST_TARGET_JENKINSFILE_PATH,
-                                         TEST_SUITE_JENKINSFILE_PATH,
-                                         COMMON_JENKINSFILE_PATH,
-                                         WORKSPACE)
+                        load_test_script(g_edited_for_testing_jenkinsfile_path,
+                                         g_common_jenkinsfile)
                     }
                 }
             }
         }
 
-        stage('Execute') {
+        stage('Test execute') {
             steps {
                 timestamps {
                     script {
-                        execute_test_suite(g_test_target_jenkinsfile, g_test_suite_jenkinsfile, g_common_jenkinsfile)
+                        execute_test_suite(g_test_target_jenkinsfile,
+                                           g_test_suite_jenkinsfile,
+                                           g_common_jenkinsfile)
                     }
                 }
             }
@@ -51,29 +82,65 @@ pipeline {
     }
 }
 
-def test_init(String workspace_path) {
+def init(String test_suite_jenkinsfile_path,
+         String test_target_jenkinsfile_path,
+         String common_jenkinsfile_path,
+         String workspace_path) {
     try {
         sh("ls -l")
     } catch (Exception e) {
         powershell("dir ${workspace_path}")
     }
+
+    String common_dir_path = new File(common_jenkinsfile_path).getParent()
+    String coding_rule_path = "${common_dir_path}/check_coding_rule.jenkinsfile"
+    g_coding_rule_jenkinsfile = load(coding_rule_path)
+
+    g_test_suite_jenkinsfile = load(test_suite_jenkinsfile_path)
+    g_common_jenkinsfile = load(common_jenkinsfile_path)
+    g_edited_for_testing_jenkinsfile_path = create_edited_for_testing_jenkinsfile_path(test_target_jenkinsfile_path, 
+                                                                                       workspace_path)
+
+    StringBuilder sb = new StringBuilder()
+    sb.append("test_target_jenkinsfile_path         : ${test_target_jenkinsfile_path}\n")
+    sb.append("test_suite_jenkinsfile_path          : ${test_suite_jenkinsfile_path}\n")
+    sb.append("common_jenkinsfile_path              : ${common_jenkinsfile_path}\n")
+    sb.append("coding_rule_path                     : ${coding_rule_path}\n")
+    sb.append("g_edited_for_testing_jenkinsfile_path: ${g_edited_for_testing_jenkinsfile_path}\n")
+    println(sb.toString())
 }
 
-def load_test_script(String test_target_jenkinsfile_path,
-                     String test_suite_jenkinsfile_path,
-                     String common_jenkinsfile_path,
-                     String workspace_path) {
-    g_test_suite_jenkinsfile = load("${test_suite_jenkinsfile_path}")
-    g_common_jenkinsfile = load("${common_jenkinsfile_path}")
-
+def create_edited_for_testing_jenkinsfile_path(String test_target_jenkinsfile_path,
+                                               String workspace_path) {
+    String jenkinsfile_name = new File(test_target_jenkinsfile_path).getName()
     String unique_id = get_unique_id()
-    g_test_target_jenkinsfile = g_common_jenkinsfile.load_script_edited_for_testing(test_target_jenkinsfile_path, workspace_path, unique_id)
+    return "${workspace_path}/${jenkinsfile_name}_${unique_id}.groovy"
 }
 
 def get_unique_id() {
     def date = LocalDateTime.now()
     def now = date.format(DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss'))
     return "${now}_${BUILD_ID}"
+}
+
+def create_test_script(String test_target_jenkinsfile_path,
+                       String edited_for_testing_jenkinsfile_path) {
+    g_common_jenkinsfile.create_script_edited_for_testing(test_target_jenkinsfile_path,
+                                                          edited_for_testing_jenkinsfile_path)
+}
+
+def is_applied_coding_rule(String test_target_jenkinsfile_path,
+                           def coding_rule_jenkinsfile,
+                           def common_jenkinsfile) {
+    if (coding_rule_jenkinsfile.is_applied(test_target_jenkinsfile_path, common_jenkinsfile)) {
+        println("coding rule ... OK.")
+    } else {
+        error("coding rule ... NG.")
+    }
+}
+
+def load_test_script(String edited_for_testing_jenkinsfile_path, def common_jenkinsfile) {
+    g_test_target_jenkinsfile = g_common_jenkinsfile.load_script(edited_for_testing_jenkinsfile_path)
 }
 
 def execute_test_suite(def test_target_jenkinsfile,

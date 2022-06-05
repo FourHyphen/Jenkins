@@ -1,31 +1,23 @@
 // 前提: Jenkins サーバーの文字コードが SJIS である
 // UTF8 に変更する場合、BOM なしにすること(BOM ありだとスクリプトの最初の行が BOM バイト付きで処理され、しかも load でエラーしないので厄介)
 
-def load_script_edited_for_testing(String test_script_path, String workspace_path, String unique_id) {
-    // テスト用に pipeline ブロックを除いた、UTF-8(BOM なし)スクリプトファイルを作成
-    String script_edited_for_testing_path = "${workspace_path}/${unique_id}.groovy"
-    create_script_edited_for_testing(test_script_path, script_edited_for_testing_path)
-
-    // テスト用のスクリプトを load
-    return load_script(script_edited_for_testing_path)
-}
-
 def create_script_edited_for_testing(String original_path, String create_path) {
-    // テスト用に pipeline ブロックなし＆ return this ありのスクリプト本文を作成し、保存する
+    // テスト用に以下加工を施してUTF-8(BOM なし)で保存
+    //  - pipeline ブロックを除く
+    //  - return this 付与
     String text = read_file(original_path)
     String contents = exclude_pipeline_block(text)
     contents = add_return_this(contents)
     writeFile(file: create_path, text: contents)
 
-    sh("cat ${create_path}")
+    // sh("cat ${create_path}")
 
-    // println(contents)
     println("create: ${create_path} ... OK")
 }
 
 def read_file(String file_path) {
     // いちいち Scripts not permitted to use に対応するのが面倒なのでスクリプト処理
-    // return new File(file_path).getText()
+    // やりたいことは return new File(file_path).getText()
     try {
         // BOM なしで読み込む
         return read_file_linux_without_bom(file_path)
