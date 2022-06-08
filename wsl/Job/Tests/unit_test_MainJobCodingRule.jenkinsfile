@@ -1,0 +1,12 @@
+// test_target_jenkinsfile -> テスト対象 jenkinsfile の load 結果
+// common -> common.jenkinsfile の load 結果
+def test_suite(def test_target_jenkinsfile, def common) {
+    // TODO: テスト実装
+    List results = []
+    results.add(true)
+
+    // 結果確認
+    return common.did_success_all(results)
+}
+
+return this

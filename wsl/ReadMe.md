@@ -152,10 +152,10 @@
       - 名前はテスト対象のスクリプト名にしておくとわかりやすくなる
       - パイプラインジョブ
       - ビルドパラメーター
-        - TEST_TARGET_JENKINSFILE_PATH
+        - TEST_TARGET_JOB_JENKINSFILE_PATH
           - 文字列
           - 初期値: `/mnt/c/ ... /テストしたいもの.jenkinsfile`
-        - TEST_SUITE_JENKINSFILE_PATH
+        - UNIT_TEST_JENKINSFILE_PATH
           - 文字列
           - 初期値: `/mnt/c/ ... /unit_test_テストしたいもの.jenkinsfile`
         - COMMON_JENKINSFILE_PATH

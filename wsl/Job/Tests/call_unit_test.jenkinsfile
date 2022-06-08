@@ -1,11 +1,11 @@
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-g_edited_for_testing_jenkinsfile_path = null
-g_test_target_jenkinsfile = null
-g_test_suite_jenkinsfile = null
-g_common_jenkinsfile = null
-g_coding_rule_jenkinsfile = null
+g_edited_for_testing_jenkinsfile_path = null    // テストしたい jenkinsfile をテストできるように編集したファイルの保存先
+g_test_target_jenkinsfile_edited = null         // g_edited_for_testing_jenkinsfile_path を load した結果
+g_unit_test_jenkinsfile = null                  // unit_test_***.jenkinsfile の load 結果
+g_common_jenkinsfile = null                     // common.jenkinsfile の load 結果
+g_coding_rule_jenkinsfile = null                // コーディングルールのチェックロジックの入った jenkinsfile の load 結果
 
 pipeline {
     agent any
@@ -15,8 +15,8 @@ pipeline {
             steps {
                 timestamps {
                     script {
-                        init(TEST_SUITE_JENKINSFILE_PATH,
-                             TEST_TARGET_JENKINSFILE_PATH,
+                        init(UNIT_TEST_JENKINSFILE_PATH,
+                             TEST_TARGET_JOB_JENKINSFILE_PATH,
                              COMMON_JENKINSFILE_PATH,
                              WORKSPACE)
                     }
@@ -28,7 +28,7 @@ pipeline {
             steps {
                 timestamps {
                     script {
-                        create_test_script(TEST_TARGET_JENKINSFILE_PATH,
+                        create_test_script(TEST_TARGET_JOB_JENKINSFILE_PATH,
                                            g_edited_for_testing_jenkinsfile_path)
                     }
                 }
@@ -41,7 +41,7 @@ pipeline {
                 catchError(stageResult: 'FAILURE') {
                     timestamps {
                         script {
-                            is_applied_coding_rule(TEST_TARGET_JENKINSFILE_PATH,
+                            is_applied_coding_rule(TEST_TARGET_JOB_JENKINSFILE_PATH,
                                                    g_coding_rule_jenkinsfile,
                                                    g_common_jenkinsfile)
                         }
@@ -54,8 +54,8 @@ pipeline {
             steps {
                 timestamps {
                     script {
-                        load_test_script(g_edited_for_testing_jenkinsfile_path,
-                                         g_common_jenkinsfile)
+                        g_test_target_jenkinsfile_edited = load_test_script(g_edited_for_testing_jenkinsfile_path,
+                                                                            g_common_jenkinsfile)
                     }
                 }
             }
@@ -65,8 +65,8 @@ pipeline {
             steps {
                 timestamps {
                     script {
-                        execute_test_suite(g_test_target_jenkinsfile,
-                                           g_test_suite_jenkinsfile,
+                        execute_test_suite(g_test_target_jenkinsfile_edited,
+                                           g_unit_test_jenkinsfile,
                                            g_common_jenkinsfile)
                     }
                 }
@@ -82,38 +82,36 @@ pipeline {
     }
 }
 
-def init(String test_suite_jenkinsfile_path,
-         String test_target_jenkinsfile_path,
+// 各種 jenkinsfile を load
+// テストしたい jenkinsfile をテストできるように編集したファイルの保存先パスを作成
+def init(String unit_test_jenkinsfile_path,
+         String test_target_job_jenkinsfile_path,
          String common_jenkinsfile_path,
          String workspace_path) {
     println("workspace: ${workspace_path}")
-    try {
-        sh("ls -l")
-    } catch (Exception e) {
-        powershell("dir ${workspace_path}")
-    }
+    ls(workspace_path)
 
     String common_dir_path = new File(common_jenkinsfile_path).getParent()
     String coding_rule_path = "${common_dir_path}/check_coding_rule.jenkinsfile"
-    g_coding_rule_jenkinsfile = load(coding_rule_path)
 
-    g_test_suite_jenkinsfile = load(test_suite_jenkinsfile_path)
     g_common_jenkinsfile = load(common_jenkinsfile_path)
-    g_edited_for_testing_jenkinsfile_path = create_edited_for_testing_jenkinsfile_path(test_target_jenkinsfile_path, 
+    g_coding_rule_jenkinsfile = g_common_jenkinsfile.load_script(coding_rule_path)
+    g_unit_test_jenkinsfile = g_common_jenkinsfile.load_script(unit_test_jenkinsfile_path)
+    g_edited_for_testing_jenkinsfile_path = create_edited_for_testing_jenkinsfile_path(test_target_job_jenkinsfile_path,
                                                                                        workspace_path)
-
-    StringBuilder sb = new StringBuilder()
-    sb.append("test_target_jenkinsfile_path         : ${test_target_jenkinsfile_path}\n")
-    sb.append("test_suite_jenkinsfile_path          : ${test_suite_jenkinsfile_path}\n")
-    sb.append("common_jenkinsfile_path              : ${common_jenkinsfile_path}\n")
-    sb.append("coding_rule_path                     : ${coding_rule_path}\n")
-    sb.append("g_edited_for_testing_jenkinsfile_path: ${g_edited_for_testing_jenkinsfile_path}\n")
-    println(sb.toString())
 }
 
-def create_edited_for_testing_jenkinsfile_path(String test_target_jenkinsfile_path,
+def ls(String dir_path) {
+    try {
+        sh("ls -l ${dir_path}")
+    } catch (Exception e) {
+        powershell("dir ${dir_path}")
+    }
+}
+
+def create_edited_for_testing_jenkinsfile_path(String test_target_job_jenkinsfile_path,
                                                String workspace_path) {
-    String jenkinsfile_name = new File(test_target_jenkinsfile_path).getName()
+    String jenkinsfile_name = new File(test_target_job_jenkinsfile_path).getName()
     String unique_id = get_unique_id()
     return "${workspace_path}/${jenkinsfile_name}_${unique_id}.groovy"
 }
@@ -124,30 +122,35 @@ def get_unique_id() {
     return "${now}_${BUILD_ID}"
 }
 
-def create_test_script(String test_target_jenkinsfile_path,
+// テストしたい jenkinsfile をテストできるように編集し、保存
+def create_test_script(String test_target_job_jenkinsfile_path,
                        String edited_for_testing_jenkinsfile_path) {
-    g_common_jenkinsfile.create_script_edited_for_testing(test_target_jenkinsfile_path,
+    g_common_jenkinsfile.create_script_edited_for_testing(test_target_job_jenkinsfile_path,
                                                           edited_for_testing_jenkinsfile_path)
 }
 
-def is_applied_coding_rule(String test_target_jenkinsfile_path,
+// コーディングルールの遵守をチェック
+// (チェックには限界があるのでこれが通れば全て OK という訳ではない)
+def is_applied_coding_rule(String test_target_job_jenkinsfile_path,
                            def coding_rule_jenkinsfile,
                            def common_jenkinsfile) {
-    if (coding_rule_jenkinsfile.is_applied(test_target_jenkinsfile_path, common_jenkinsfile)) {
+    if (coding_rule_jenkinsfile.is_applied(test_target_job_jenkinsfile_path, common_jenkinsfile)) {
         println("coding rule ... OK.")
     } else {
         error("coding rule ... NG.")
     }
 }
 
+// テストしたい jenkinsfile をテストできるように編集したファイルを load
 def load_test_script(String edited_for_testing_jenkinsfile_path, def common_jenkinsfile) {
-    g_test_target_jenkinsfile = g_common_jenkinsfile.load_script(edited_for_testing_jenkinsfile_path)
+    return g_common_jenkinsfile.load_script(edited_for_testing_jenkinsfile_path)
 }
 
+// テストしたい jenkinsfile にテストを実施
 def execute_test_suite(def test_target_jenkinsfile,
                        def test_suite_jenkinsfile,
                        def common_jenkinsfile) {
-    Boolean result = test_suite_jenkinsfile.test_suite(test_target_jenkinsfile, common_jenkinsfile)
+    boolean result = test_suite_jenkinsfile.test_suite(test_target_jenkinsfile, common_jenkinsfile)
     if (result) {
         println("test success.")
     } else {

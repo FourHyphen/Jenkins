@@ -1,0 +1,106 @@
+class ClassDefineOK {
+    String tmp = null
+}
+
+/* NG 理由) クラス名は UpperCamelCase */
+class class_define_ng1 {
+    String tmp = null
+}
+
+/* NG 理由) 半角スペースない */
+class ClassDefineNG2{
+    String tmp = null
+}
+
+/* NG 理由) 半角スペース多すぎ */
+class ClassDefineNG3  {
+    String tmp = null
+}
+
+GLOBAL_CONSTANT_OK =
+'''
+A	B
+a	b
+'''
+
+GLOBAL_CONSTANT_ng1 = null    /* NG 理由) 小文字使用 */
+GLOBAL_CONSTANT_NG2= null     /* NG 理由) 半角スペースない */
+GLOBAL_CONSTANT_NG3 =null     /* NG 理由) 半角スペースない */
+
+g_value_ok = ''
+g_value_ng1= ""    /* NG 理由) 半角スペースない */
+g_value_ng2 =""    /* NG 理由) 半角スペースない */
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Pre') {
+            steps {
+                echo("tmp")
+            }
+        }
+    }
+}
+
+/* 変数関連 */
+def var(String value) {
+    /* OK */
+    g_value_ok = value
+    String tmp = '''$"`'|%.:+=!?<>&@'''
+
+    /* NG */
+    g_value1= value
+    g_value1 =value
+    local_val_no_type_ng = value
+}
+
+/* インデント */
+def indent() {
+    /* OK */
+    int indent = 0
+
+    /* NG */
+     int indent_ng1 = 0
+   int indent_ng2 = 0
+int indent_ng3 = 0
+
+    /* インデントのみ存在する行も NG */
+    
+}
+
+/* 関数 */
+def func_define_ok1() {
+}
+
+def func_define_ok2(int arg) {
+}
+
+def func_define_ok3(int arg1, String arg2) {
+}
+
+def func_define_ok4(int arg1,
+                    int arg2) {
+}
+
+/* NG 理由) 半角スペース */
+def func_define_ng1( ) {
+}
+
+/* NG 理由) 半角スペース */
+def func_define_ng2(){
+}
+
+/* NG 理由) 半角スペース */
+def func_define_ng3( int arg1) {
+}
+
+/* NG 理由) 半角スペース */
+def func_define_ng4(int arg1,  int arg2) {
+}
+
+/* NG 理由) 半角スペース */
+def func_define_ng5(int  arg) {
+}
+
+
