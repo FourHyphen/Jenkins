@@ -48,6 +48,11 @@ def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
             if (is_only_indent(line, indent_num, line_num)) {
                 result = false
             }
+
+            // 処理に関する行のチェック
+            if (!is_ok_process(line, line_num)) {
+                result = false
+            }
         }
 
         // ''' や """ で括り始める行の場合、その括りの終了までチェックしないようフラグ立て
@@ -64,6 +69,9 @@ def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
     return result
 }
 
+////////////////////////////////////////////////////////////
+// ''' や """ で括られた範囲に関する処理
+////////////////////////////////////////////////////////////
 def num_of_single_quote_triple(String line) {
     def triple_match = /'''/
     return match_num(triple_match, line)
@@ -84,6 +92,9 @@ def debug_dump(String str) {
     }
 }
 
+////////////////////////////////////////////////////////////
+// インデント関連
+////////////////////////////////////////////////////////////
 def get_indent_num(String line) {
     def indent_match = /^( )*/
     return (line =~ indent_match)[0][0].length()
@@ -107,6 +118,9 @@ def is_only_indent(String line, int indent_num, int line_num) {
     return true
 }
 
+////////////////////////////////////////////////////////////
+// 定義行
+////////////////////////////////////////////////////////////
 def is_ok_define(String line, int line_num) {
     // クラス定義開始行
     if ((line =~ /^class /)) {
@@ -180,6 +194,34 @@ def is_match_func_format(String line, int line_num) {
 def is_match_global_constant(String line, int line_num) {
     if (!(line =~ /^[A-Z][A-Z0-9_]+ += +/) && !(line =~ /^[A-Z][A-Z0-9_]+ +=$/)) {
         println("[ERROR] line ${line_num}: ${line}\n    global constant format -> ^[A-Z][A-Z0-9_]+ += +")
+        return false
+    }
+
+    return true
+}
+
+////////////////////////////////////////////////////////////
+// 処理行
+////////////////////////////////////////////////////////////
+def is_ok_process(String line, int line_num) {
+    // 変数への代入行
+    if ((line =~ /=/)) {
+        debug_dump("var: ${line}")
+        if (!is_match_var_format(line, line_num)) {
+            return false
+        }
+    }
+}
+
+def is_match_var_format(String line, int line_num) {
+    // 代入値が下の行に記載されている場合
+    if (line =~ / = ?$/) {
+        return true
+    }
+
+    // 同じ行で代入を完結するならチェック
+    if (!(line =~ / = /)) {
+        println("[ERROR] line ${line_num}: ${line}\n    var format -> \" = \"")
         return false
     }
 

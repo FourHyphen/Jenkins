@@ -48,11 +48,13 @@ def var(String value) {
     /* OK */
     g_value_ok = value
     String tmp = '''$"`'|%.:+=!?<>&@'''
+    String tmp2 =
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
     /* NG */
-    g_value1= value
-    g_value1 =value
-    local_val_no_type_ng = value
+    String value_ng1= value
+    String value_ng2 =value
+    /* local_val_no_type_ng = value    これはチェック不可なので諦める */
 }
 
 /* インデント */
