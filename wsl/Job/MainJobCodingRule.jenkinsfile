@@ -105,4 +105,49 @@ def func_define_ng4(int arg1,  int arg2) {
 def func_define_ng5(int  arg) {
 }
 
+def if() {
+    if (true == true) {    /* OK */
+        return true
+    } else if (true != false) {   /* OK */
+        return true
+    } else if (false== false) {    /* NG */
+        return false
+    } else if (false ==false) {    /* NG */
+        return false
+    } else if (false!= false) {    /* NG */
+        return false
+    } else if (false !=false) {    /* NG */
+        return false
+    }
+}
+
+def judge() {
+    return (true == true)    /* OK */
+    return (true != false)   /* OK */
+    return (false== false)    /* NG */
+    return (false ==false)    /* NG */
+    return (false!= false)    /* NG */
+    return (false !=false)    /* NG */
+
+    return (true == true) && (true == true)    /* OK */
+    return (true == true) || (true == true)    /* OK */
+    return (false == false)&& (false == false)    /* NG */
+    return (false == false) &&(false == false)    /* NG */
+    return (false == false)|| (false == false)    /* NG */
+    return (false == false) ||(false == false)    /* NG */
+}
+
+def comment() {
+    /* OK */
+    /*
+    */    /* OK */
+    // NG
+    /*NG */
+    /* NG*/
+
+    String var_ok = ""    /* OK */
+    String var_ng1 = ""    /*NG */
+    String var_ng2 = ""    /* NG*/
+    /* String var_ng3 = ""    // "//" 形式は NG だけどチェック諦める */
+}
 

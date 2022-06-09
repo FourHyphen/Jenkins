@@ -1,6 +1,15 @@
 g_check_coding_rule_debug = false
+g_check_all_result_builder = new StringBuilder()
 
 def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
+    try {
+        is_applied_core(jenkinsfile_path, common_jenkinsfile)
+    } finally {
+        println(g_check_all_result_builder.toString())
+    }
+}
+
+def is_applied_core(String jenkinsfile_path, def common_jenkinsfile) {
     String text = common_jenkinsfile.read_file(jenkinsfile_path)
 
     // (?m) -> 複数行マッチモード(^ が改行文字直後の行頭にマッチする)
@@ -17,7 +26,7 @@ def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
         if (during_string_single_quote) {
             if (num_of_single_quote_triple(line) == 1) {
                 during_string_single_quote = false
-                println("line ${line_num} : ''' end  : ${line}")
+                result_append("line ${line_num} : ''' end  : ${line}")
             } else {
                 debug_dump("'''      : ${line}")
             }
@@ -27,12 +36,15 @@ def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
         if (during_string_double_quote) {
             if (num_of_single_double_triple(line) == 1) {
                 during_string_double_quote = false
-                println("line ${line_num} : \"\"\" end  : ${line}")
+                result_append("line ${line_num} : \"\"\" end  : ${line}")
             } else {
                 debug_dump("\"\"\"      : ${line}")
             }
             continue
         }
+
+        // コメントのチェック(NG パターンと混在している場合もあるので結果を無視する)
+        is_ok_comment(line, line_num)
 
         int indent_num = get_indent_num(line)
         if (indent_num == 0) {
@@ -41,7 +53,7 @@ def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
                 result = false
             }
         } else {
-            // インデントチェック(複数行に渡る場合の整形もあるので NG にはしない)
+            // インデントチェック(複数行に渡る場合の整形もあるので結果を無視する)
             is_ok_indent_num(line, indent_num, line_num)
 
             // ただしインデントのみの行は NG
@@ -58,15 +70,22 @@ def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
         // ''' や """ で括り始める行の場合、その括りの終了までチェックしないようフラグ立て
         if (num_of_single_quote_triple(line) == 1) {
             during_string_single_quote = true
-            println("line ${line_num} : ''' start: ${line}")
+            result_append("line ${line_num} : ''' start: ${line}")
         } else if (num_of_double_quote_triple(line) == 1) {
             during_string_double_quote = true
-            println("line ${line_num} : \"\"\" start: ${line}")
+            result_append("line ${line_num} : \"\"\" start: ${line}")
         }
     }
 
     println("is_applied(): return ${result}")
     return result
+}
+
+////////////////////////////////////////////////////////////
+// チェック結果の管理
+////////////////////////////////////////////////////////////
+def result_append(String str) {
+    g_check_all_result_builder.append("${str}\n")
 }
 
 ////////////////////////////////////////////////////////////
@@ -88,8 +107,35 @@ def match_num(def regex, String str) {
 
 def debug_dump(String str) {
     if (g_check_coding_rule_debug) {
-        println("[DEBUG] ${str}")
+        result_append("[DEBUG] ${str}")
     }
+}
+
+////////////////////////////////////////////////////////////
+// コメント関連
+////////////////////////////////////////////////////////////
+def is_ok_comment(String line, int line_num) {
+    // コメント関連の文字列が存在しないならチェック不要
+    if (!line.contains("//") && !line.contains("/*") && !line.contains("*/")) {
+        return true
+    }
+
+    // "    //" 等、インデント + "//" の行は NG
+    boolean result = true
+    if (line =~ '^ *//') {
+        result_append("[WARN] line ${line_num}: ${line}\n    comment -> /* ... */")
+        result = false
+    }
+
+    // /* ... */ が 1 行に収まっている場合、半角スペースのチェック
+    if (line =~ /\/\*.*\*\/ *?$/) {
+        if (!line.contains("/* ") || !line.contains(" */")) {
+        result_append("[WARN] line ${line_num}: ${line}\n    comment -> /* ... */")
+            result = false
+        }
+    }
+
+    return true
 }
 
 ////////////////////////////////////////////////////////////
@@ -102,7 +148,7 @@ def get_indent_num(String line) {
 
 def is_ok_indent_num(String line, int indent_num, int line_num) {
     if (indent_num % 4 != 0) {
-        println("[WARN] line ${line_num}: ${line}\n    indent.length() = ${indent_num}")
+        result_append("[WARN] line ${line_num}: ${line}\n    indent.length() = ${indent_num}")
         return false
     }
 
@@ -111,7 +157,7 @@ def is_ok_indent_num(String line, int indent_num, int line_num) {
 
 def is_only_indent(String line, int indent_num, int line_num) {
     if (indent_num == line.length()) {
-        println("[WARN] line ${line_num}: ${line}\n    only indent")
+        result_append("[WARN] line ${line_num}: ${line}\n    only indent")
         return false
     }
 
@@ -151,7 +197,7 @@ def is_ok_define(String line, int line_num) {
 
 def is_match_class_format(String line, int line_num) {
     if (!(line =~ /^class [A-Z][^_ ]+ \{$/)) {
-        println("[ERROR] line ${line_num}: ${line}\n    class format -> ^class [A-Z][^_ ]+ {\$")
+        result_append("[ERROR] line ${line_num}: ${line}\n    class format -> ^class [A-Z][^_ ]+ {\$")
         return false
     }
 
@@ -165,7 +211,7 @@ def is_match_func_format(String line, int line_num) {
     // 関数名や小かっこ
     match = "^def [^A-Z ]+\\((\\) \\{|[^ ].*?[^ ](,|\\) \\{))"
     if (!(line =~ match)) {
-        println("[ERROR] line ${line_num}: ${line}\n    func format -> ${match}")
+        result_append("[ERROR] line ${line_num}: ${line}\n    func format -> ${match}")
         result = false
     }
 
@@ -184,7 +230,7 @@ def is_match_func_format(String line, int line_num) {
     debug_dump("reconstruct: ${reconstruct}")
 
     if (!line.contains(reconstruct) || reconstruct == "") {
-        println("[ERROR] line ${line_num}: ${line}\n    func arg format -> type arg_name, type arg_name")
+        result_append("[ERROR] line ${line_num}: ${line}\n    func arg format -> type arg_name, type arg_name")
         result = false
     }
 
@@ -193,7 +239,7 @@ def is_match_func_format(String line, int line_num) {
 
 def is_match_global_constant(String line, int line_num) {
     if (!(line =~ /^[A-Z][A-Z0-9_]+ += +/) && !(line =~ /^[A-Z][A-Z0-9_]+ +=$/)) {
-        println("[ERROR] line ${line_num}: ${line}\n    global constant format -> ^[A-Z][A-Z0-9_]+ += +")
+        result_append("[ERROR] line ${line_num}: ${line}\n    global constant format -> ^[A-Z][A-Z0-9_]+ += +")
         return false
     }
 
@@ -204,13 +250,60 @@ def is_match_global_constant(String line, int line_num) {
 // 処理行
 ////////////////////////////////////////////////////////////
 def is_ok_process(String line, int line_num) {
-    // 変数への代入行
-    if ((line =~ /=/)) {
+    if (line =~ /if[ \\(]/) {
+        // if 行
+        debug_dump("if: ${line}")
+        if (!is_match_if_format(line, line_num)) {
+            return false
+        }
+    } else if (line.contains("==") || line.contains("!=")) {
+        // if 以外の条件判定行
+        debug_dump("judge(not if): ${line}")
+        if (!is_match_judge_format(line, line_num)) {
+            return false
+        }
+    } else if (line.contains("=~")) {
+        // 正規表現処理行
+    } else if (line.contains("=")) {
+        // 変数への代入行
         debug_dump("var: ${line}")
         if (!is_match_var_format(line, line_num)) {
             return false
         }
     }
+}
+
+def is_match_if_format(String line, int line_num) {
+    boolean result = true
+    if (!(line =~ /if \([^ ]/)) {
+        result_append("[ERROR] line ${line_num}: ${line}\n    if format -> if \\([^ ]")
+        result = false
+    }
+
+    if (line.contains("==") || line.contains("!=")) {
+        if (!is_match_judge_format(line, line_num)) {
+            result = false
+        }
+    }
+
+    return result
+}
+
+def is_match_judge_format(String line, int line_num) {
+    boolean result = true
+    if (!(line =~ / [!=]= /)) {
+        result_append("[ERROR] line ${line_num}: ${line}\n    judge format -> \" =[!=] \"")
+        result = false
+    }
+
+    if (line.contains("||") || line.contains("&&")) {
+        if (!(line =~ / [|&][|&] /)) {
+            result_append("[ERROR] line ${line_num}: ${line}\n    judge format -> \" [|&][|&] \"")
+            result = false
+        }
+    }
+
+    return result
 }
 
 def is_match_var_format(String line, int line_num) {
@@ -221,7 +314,7 @@ def is_match_var_format(String line, int line_num) {
 
     // 同じ行で代入を完結するならチェック
     if (!(line =~ / = /)) {
-        println("[ERROR] line ${line_num}: ${line}\n    var format -> \" = \"")
+        result_append("[ERROR] line ${line_num}: ${line}\n    var format -> \" = \"")
         return false
     }
 
