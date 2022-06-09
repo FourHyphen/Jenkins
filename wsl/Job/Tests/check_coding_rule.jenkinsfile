@@ -128,7 +128,8 @@ def is_ok_comment(String line, int line_num) {
     }
 
     // /* ... */ が 1 行に収まっている場合、半角スペースのチェック
-    if (line =~ /\/\*.*\*\/ *?$/) {
+    // ただし "/****" のようなコメントは関数等の定義ヘッダコメントのためこのチェックから除外する
+    if (line =~ /\/\*[^*].*\*\/ *?$/) {
         if (!line.contains("/* ") || !line.contains(" */")) {
         result_append("[WARN] line ${line_num}: ${line}\n    comment -> /* ... */")
             result = false

@@ -105,7 +105,7 @@ def func_define_ng4(int arg1,  int arg2) {
 def func_define_ng5(int  arg) {
 }
 
-def if() {
+def if_() {
     if (true == true) {    /* OK */
         return true
     } else if (true != false) {   /* OK */
@@ -144,6 +144,8 @@ def comment() {
     // NG
     /*NG */
     /* NG*/
+
+    /****ignore: 何らかの定義のヘッダコメントを想定**/
 
     String var_ok = ""    /* OK */
     String var_ng1 = ""    /*NG */
