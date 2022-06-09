@@ -125,6 +125,10 @@ def get_unique_id() {
 // テストしたい jenkinsfile をテストできるように編集し、保存
 def create_test_script(String test_target_job_jenkinsfile_path,
                        String edited_for_testing_jenkinsfile_path) {
+    if (!(new File(test_target_job_jenkinsfile_path).exists())) {
+        error("file not exist: ${test_target_job_jenkinsfile_path}")
+    }
+
     g_common_jenkinsfile.create_script_edited_for_testing(test_target_job_jenkinsfile_path,
                                                           edited_for_testing_jenkinsfile_path)
 }
