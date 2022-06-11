@@ -3,7 +3,7 @@ g_check_all_result_builder = new StringBuilder()
 
 def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
     try {
-        is_applied_core(jenkinsfile_path, common_jenkinsfile)
+        return is_applied_core(jenkinsfile_path, common_jenkinsfile)
     } finally {
         println(g_check_all_result_builder.toString())
     }
@@ -77,7 +77,7 @@ def is_applied_core(String jenkinsfile_path, def common_jenkinsfile) {
         }
     }
 
-    println("is_applied(): return ${result}")
+    println("is_applied_core(): return ${result}")
     return result
 }
 
@@ -131,7 +131,7 @@ def is_ok_comment(String line, int line_num) {
     // ただし "/****" のようなコメントは関数等の定義ヘッダコメントのためこのチェックから除外する
     if (line =~ /\/\*[^*].*\*\/ *?$/) {
         if (!line.contains("/* ") || !line.contains(" */")) {
-        result_append("[WARN] line ${line_num}: ${line}\n    comment -> /* ... */")
+            result_append("[WARN] line ${line_num}: ${line}\n    comment -> /* ... */")
             result = false
         }
     }
@@ -159,10 +159,10 @@ def is_ok_indent_num(String line, int indent_num, int line_num) {
 def is_only_indent(String line, int indent_num, int line_num) {
     if (indent_num == line.length()) {
         result_append("[WARN] line ${line_num}: ${line}\n    only indent")
-        return false
+        return true
     }
 
-    return true
+    return false
 }
 
 ////////////////////////////////////////////////////////////
@@ -172,25 +172,19 @@ def is_ok_define(String line, int line_num) {
     // クラス定義開始行
     if ((line =~ /^class /)) {
         debug_dump("class: ${line}")
-        if (!is_match_class_format(line, line_num)) {
-            return false
-        }
+        return is_match_class_format(line, line_num)
     }
 
     // 関数定義開始行
     if ((line =~ /^def /)) {
         debug_dump("func: ${line}")
-        if (!is_match_func_format(line, line_num)) {
-            return false
-        }
+        return is_match_func_format(line, line_num)
     }
 
     // グローバル定数定義行
     if ((line =~ /^[A-Z].+?=/)) {
         debug_dump("global constant: ${line}")
-        if (!is_match_global_constant(line, line_num)) {
-            return false
-        }
+        return is_match_global_constant(line, line_num)
     }
 
     return true
@@ -251,27 +245,31 @@ def is_match_global_constant(String line, int line_num) {
 // 処理行
 ////////////////////////////////////////////////////////////
 def is_ok_process(String line, int line_num) {
+    // if 行
     if (line =~ /if[ \\(]/) {
-        // if 行
         debug_dump("if: ${line}")
-        if (!is_match_if_format(line, line_num)) {
-            return false
-        }
-    } else if (line.contains("==") || line.contains("!=")) {
-        // if 以外の条件判定行
-        debug_dump("judge(not if): ${line}")
-        if (!is_match_judge_format(line, line_num)) {
-            return false
-        }
-    } else if (line.contains("=~")) {
-        // 正規表現処理行
-    } else if (line.contains("=")) {
-        // 変数への代入行
-        debug_dump("var: ${line}")
-        if (!is_match_var_format(line, line_num)) {
-            return false
-        }
+        return is_match_if_format(line, line_num)
     }
+
+    // if 以外の条件判定行
+    if (line.contains("==") || line.contains("!=")) {
+        debug_dump("judge(not if): ${line}")
+        return is_match_judge_format(line, line_num)
+    }
+
+    // 正規表現処理行
+    if (line.contains("=~")) {
+        debug_dump("regex: ${line}")
+        return is_match_regex_format(line, line_num)
+    }
+
+    // 変数への代入行
+    if (line.contains("=")) {
+        debug_dump("var: ${line}")
+        return is_match_var_format(line, line_num)
+    }
+
+    return true
 }
 
 def is_match_if_format(String line, int line_num) {
@@ -304,7 +302,22 @@ def is_match_judge_format(String line, int line_num) {
         }
     }
 
+    if (line.contains("=~")) {
+        if (!is_match_regex_format(line, line_num)) {
+            result = false
+        }
+    }
+
     return result
+}
+
+def is_match_regex_format(String line, int line_num) {
+    if (!(line =~ / =~ /)) {
+        result_append("[ERROR] line ${line_num}: ${line}\n    regex format -> \" =~ \"")
+        return false
+    }
+
+    return true
 }
 
 def is_match_var_format(String line, int line_num) {
