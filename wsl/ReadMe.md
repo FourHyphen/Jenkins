@@ -80,7 +80,9 @@
 ## 手順
 - [参考](https://batmat.net/2018/09/07/how-to-run-and-upgrade-jenkins-using-the-official-docker-image/)
 - WSL 上の ubuntu で実施
-  - Jenkins 2.313 の理由: 手元検証してたときのバージョンがこれだったため(これ以上の意味なし)
+  - ~~Jenkins 2.313 の理由: 手元検証してたときのバージョンがこれだったため(これ以上の意味なし)~~
+    - 2.313 では Pipeline plugin のインストールに失敗するようになった
+  - Jenkins 2.350 の理由: 試してみたら動作が高速になっていたため
   ```
   docker volume create jenkins-data
   docker run --name jenkins-master \
@@ -90,7 +92,7 @@
              -p 8080:8080 \
              -v jenkins-data:/var/jenkins_home \
              -v /mnt:/mnt \
-             jenkins/jenkins:2.313
+             jenkins/jenkins:2.350
   
   # jobs.tar.gz を展開して /var/jenkins_home に配置
   cd /mnt/c/jobs.tar.gz を置いてあるどこか
@@ -112,7 +114,7 @@
 
 ## 参考
 - Jenkins バージョン
-  - 現状 Pipeline plugin は 2.313 でインストール成功を確認済み
+  - 現状 Pipeline plugin は 2.350 でインストール成功を確認済み
   - インストール失敗するようになったらバージョンアップを検討すること
   - [タグ参考](https://hub.docker.com/r/jenkins/jenkins)
 - Jenkins 環境構築し直す場合
