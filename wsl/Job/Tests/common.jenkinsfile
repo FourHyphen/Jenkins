@@ -60,6 +60,24 @@ def load_script(String load_script_path) {
     return script
 }
 
+def is_true(def actual, String print_if_ng) {
+    if (!actual) {
+        println("check NG... ${print_if_ng}: expected: true / actual: false")
+        return false
+    }
+
+    return true
+}
+
+def is_false(def actual, String print_if_ng) {
+    if (actual) {
+        println("check NG... ${print_if_ng}: expected: false / actual: true")
+        return false
+    }
+
+    return true
+}
+
 def are_equals(def expected, def actual) {
     if (expected == actual) {
         return true
@@ -78,7 +96,7 @@ def is_contains(def list, def expected) {
     return false
 }
 
-def print_result(Boolean result, String method_name) {
+def print_result(boolean result, String method_name) {
     String res = result ? "OK" : "NG"
     println("${method_name} ... ${res}")
 }

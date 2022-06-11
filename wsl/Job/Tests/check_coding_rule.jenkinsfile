@@ -54,10 +54,10 @@ def is_applied_core(String jenkinsfile_path, def common_jenkinsfile) {
             }
         } else {
             // インデントチェック(複数行に渡る場合の整形もあるので結果を無視する)
-            is_ok_indent_num(line, indent_num, line_num)
+            is_ok_indent_num(line, line_num)
 
-            // ただしインデントのみの行は NG
-            if (is_only_indent(line, indent_num, line_num)) {
+            // 行末に余計なスペースがある場合は NG (インデントのみの行もここで NG とする)
+            if (!is_ok_line_tail(line, line_num)) {
                 result = false
             }
 
@@ -136,7 +136,7 @@ def is_ok_comment(String line, int line_num) {
         }
     }
 
-    return true
+    return result
 }
 
 ////////////////////////////////////////////////////////////
@@ -147,7 +147,8 @@ def get_indent_num(String line) {
     return (line =~ indent_match)[0][0].length()
 }
 
-def is_ok_indent_num(String line, int indent_num, int line_num) {
+def is_ok_indent_num(String line, int line_num) {
+    int indent_num = get_indent_num(line)
     if (indent_num % 4 != 0) {
         result_append("[WARN] line ${line_num}: ${line}\n    indent.length() = ${indent_num}")
         return false
@@ -156,13 +157,14 @@ def is_ok_indent_num(String line, int indent_num, int line_num) {
     return true
 }
 
-def is_only_indent(String line, int indent_num, int line_num) {
-    if (indent_num == line.length()) {
-        result_append("[WARN] line ${line_num}: ${line}\n    only indent")
-        return true
+def is_ok_line_tail(String line, int line_num) {
+    // 行末にスペースがある場合は NG
+    if (line =~ / +$/) {
+        result_append("[ERROR] line ${line_num}: ${line}\n    not space at line tail")
+        return false
     }
 
-    return false
+    return true
 }
 
 ////////////////////////////////////////////////////////////
@@ -191,6 +193,25 @@ def is_ok_define(String line, int line_num) {
 }
 
 def is_match_class_format(String line, int line_num) {
+    // implements / extends あり
+    if (line =~ /(implements|extends)/) {
+        return is_match_class_format_with_super(line, line_num)
+    }
+
+    // 他
+    return is_match_class_format_simple(line, line_num)
+}
+
+def is_match_class_format_with_super(String line, int line_num) {
+    if (!(line =~ /^class [A-Z][^_ ]+ (implements|extends) [A-Za-z0-9_]+ \{$/)) {
+        result_append("[ERROR] line ${line_num}: ${line}\n    class format -> ^class [A-Z][^_ ]+ (implements|extends) [A-Za-z0-9_]+ {\$")
+        return false
+    }
+
+    return true
+}
+
+def is_match_class_format_simple(String line, int line_num) {
     if (!(line =~ /^class [A-Z][^_ ]+ \{$/)) {
         result_append("[ERROR] line ${line_num}: ${line}\n    class format -> ^class [A-Z][^_ ]+ {\$")
         return false
@@ -269,6 +290,12 @@ def is_ok_process(String line, int line_num) {
         return is_match_var_format(line, line_num)
     }
 
+    // return
+    if (line.contains("return ")) {
+        debug_dump("return: ${line}")
+        return is_match_return_format(line, line_num)
+    }
+
     return true
 }
 
@@ -329,6 +356,20 @@ def is_match_var_format(String line, int line_num) {
     // 同じ行で代入を完結するならチェック
     if (!(line =~ / = /)) {
         result_append("[ERROR] line ${line_num}: ${line}\n    var format -> \" = \"")
+        return false
+    }
+
+    return true
+}
+
+def is_match_return_format(String line, int line_num) {
+    // "return" だけなら OK
+    if (line =~ / *return$/) {
+        return true
+    }
+
+    if (!(line =~ /return [^ ]/)) {
+        result_append("[ERROR] line ${line_num}: ${line}\n    return format -> return [^ ]")
         return false
     }
 

@@ -1,32 +1,3 @@
-class ClassDefineOK {
-    String tmp = null
-}
-
-/* NG 理由) クラス名は UpperCamelCase */
-class class_define_ng1 {
-    String tmp = null
-}
-
-/* NG 理由) 半角スペースない */
-class ClassDefineNG2{
-    String tmp = null
-}
-
-/* NG 理由) 半角スペース多すぎ */
-class ClassDefineNG3  {
-    String tmp = null
-}
-
-GLOBAL_CONSTANT_OK =
-'''
-A	B
-a	b
-'''
-
-GLOBAL_CONSTANT_ng1 = null    /* NG 理由) 小文字使用 */
-GLOBAL_CONSTANT_NG2= null     /* NG 理由) 半角スペースない */
-GLOBAL_CONSTANT_NG3 =null     /* NG 理由) 半角スペースない */
-
 g_value_ok = ''
 g_value_ng1= ""    /* NG 理由) 半角スペースない */
 g_value_ng2 =""    /* NG 理由) 半角スペースない */
@@ -55,20 +26,6 @@ def var(String value) {
     String value_ng1= value
     String value_ng2 =value
     /* local_val_no_type_ng = value    これはチェック不可なので諦める */
-}
-
-/* インデント */
-def indent() {
-    /* OK */
-    int indent = 0
-
-    /* NG */
-     int indent_ng1 = 0
-   int indent_ng2 = 0
-int indent_ng3 = 0
-
-    /* インデントのみ存在する行も NG */
-    
 }
 
 /* 関数 */
@@ -137,19 +94,7 @@ def judge() {
     return (false == false) ||(false == false)    /* NG */
 }
 
-def comment() {
-    /* OK */
-    /*
-    */    /* OK */
-    // NG
-    /*NG */
-    /* NG*/
-
-    /****ignore: 何らかの定義のヘッダコメントを想定**/
-
-    String var_ok = ""    /* OK */
-    String var_ng1 = ""    /*NG */
-    String var_ng2 = ""    /* NG*/
-    /* String var_ng3 = ""    // "//" 形式は NG だけどチェック諦める */
+def return_() {
+    return OK    /* OK */
+    return  NG    /* NG */
 }
-
