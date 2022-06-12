@@ -3,20 +3,38 @@ import org.codehaus.groovy.runtime.MethodClosure    /* MethodClosure */
 // test_target_jenkinsfile -> テスト対象 jenkinsfile の load 結果
 // common -> common.jenkinsfile の load 結果
 def test_suite(def test_target_jenkinsfile, def common) {
-    List results = []
+    // "this." は省略不可
+    List tests = [this.&check_comment,
+                  this.&check_indent,
+                  this.&check_line_tail,
+                  this.&check_define_class,
+                  this.&check_define_global_constant,
+                  this.&check_define_func
+                  ]
 
-    results.add(check_comment(test_target_jenkinsfile, common))
-    results.add(check_indent(test_target_jenkinsfile, common))
-    results.add(check_line_tail(test_target_jenkinsfile, common))
-    results.add(check_define_class(test_target_jenkinsfile, common))
-    results.add(check_define_global_constant(test_target_jenkinsfile, common))
-    // results.add(check_define_global_var(test_target_jenkinsfile, common))
+    // テスト実施
+    StringBuilder sb = new StringBuilder()
+    List results = tests.collect {
+        boolean result = it(test_target_jenkinsfile, common, sb)
+        sb.append(common.get_result_str(result, it.getMethod()) + "\n\n")
+        return result
+    }
 
     // 結果確認
-    return common.did_success_all(results)
+    boolean did_success_all = common.did_success_all(results)
+
+    // 結果整理
+    sb.append("------------\n")
+    sb.append("OK: ${results.count(true)} / NG: ${results.count(false)}\n")
+    did_success_all ? sb.append("test ... OK") : sb.append("test ... NG!")
+
+    // 結果表示
+    println(sb.toString())
+
+    return did_success_all
 }
 
-def check_comment(def jenkinsfile, def common) {
+def check_comment(def jenkinsfile, def common, StringBuilder sb) {
     boolean result = true
 
     // OK パターン
@@ -27,7 +45,7 @@ def check_comment(def jenkinsfile, def common) {
                 "/*",
                 "*/"
                ]
-    if (!check_ok_pattern(jenkinsfile.&is_ok_comment, oks, common)) {
+    if (!check_ok_pattern(jenkinsfile.&is_ok_comment, oks, common, sb)) {
         result = false
     }
 
@@ -39,26 +57,25 @@ def check_comment(def jenkinsfile, def common) {
                 "/*NG */",
                 "/* NG*/"
                ]
-    if (!check_ng_pattern(jenkinsfile.&is_ok_comment, ngs, common)) {
+    if (!check_ng_pattern(jenkinsfile.&is_ok_comment, ngs, common, sb)) {
         result = false
     }
 
-    // Ignore
+    // 本当はチェックしたいが無視するパターン
     // /****                              : 何らかの定義のヘッダコメントを想定、チェックしない
     // String var_ng3 = ""    // コメント : 行末らへんの // は諦める
 
-    common.print_result(result, "check_comment")
     return result
 }
 
-def check_indent(def jenkinsfile, def common) {
+def check_indent(def jenkinsfile, def common, StringBuilder sb) {
     boolean result = true
 
     // OK パターン
     List oks = ["    int indent = 0",       // 4 の倍数
                 "        int indent = 0"    // 4 の倍数
                ]
-    if (!check_ok_pattern(jenkinsfile.&is_ok_indent_num, oks, common)) {
+    if (!check_ok_pattern(jenkinsfile.&is_ok_indent_num, oks, common, sb)) {
         result = false
     }
 
@@ -66,49 +83,47 @@ def check_indent(def jenkinsfile, def common) {
     List ngs = ["     int indent_ng1 = 0",    // 4 の倍数でない
                 "   int indent_ng2 = 0"       // 4 の倍数でない
                ]
-    if (!check_ng_pattern(jenkinsfile.&is_ok_indent_num, ngs, common)) {
+    if (!check_ng_pattern(jenkinsfile.&is_ok_indent_num, ngs, common, sb)) {
         result = false
     }
 
-    // Ignore
+    // 本当はチェックしたいが無視するパターン
     // "int n = 0" : ローカル変数ならインデント一切ないのは NG だがチェック不可
 
-    common.print_result(result, "check_indent")
     return result
 }
 
-def check_line_tail(def jenkinsfile, def common) {
+def check_line_tail(def jenkinsfile, def common, StringBuilder sb) {
     boolean result = true
 
     // OK パターン
     List oks = ["    int indent = 0",       // 行末に " " がなければ OK
                 "    }"
                ]
-    if (!check_ok_pattern(jenkinsfile.&is_ok_line_tail, oks, common)) {
+    if (!check_ok_pattern(jenkinsfile.&is_ok_line_tail, oks, common, sb)) {
         result = false
     }
 
     // NG パターン
     List ngs = ["    /* NG */ ",                         // 行末に " " がある
-                "    String line_tail_ng = \"\"    ",
-                "    }    "
+                "    String line_tail_ng = \"\"    ",    // 〃
+                "    }    "                              // 〃
                ]
-    if (!check_ng_pattern(jenkinsfile.&is_ok_line_tail, ngs, common)) {
+    if (!check_ng_pattern(jenkinsfile.&is_ok_line_tail, ngs, common, sb)) {
         result = false
     }
 
-    common.print_result(result, "check_line_tail")
     return result
 }
 
-def check_define_class(def jenkinsfile, def common) {
+def check_define_class(def jenkinsfile, def common, StringBuilder sb) {
     boolean result = true
 
     // OK パターン
     List oks = ["class ClassDefineOK1 {",
                 "class ClassDefineOK2 implements Cloneable {"
                ]
-    if (!check_ok_pattern(jenkinsfile.&is_match_class_format, oks, common)) {
+    if (!check_ok_pattern(jenkinsfile.&is_match_class_format, oks, common, sb)) {
         result = false
     }
 
@@ -119,22 +134,21 @@ def check_define_class(def jenkinsfile, def common) {
                 "class ClassDefineNG4 extends  Cloneable {",       // 半角スペース多すぎ
                 "class ClassDefineNG5 implements Cloneable{"       // 半角スペースない
                ]
-    if (!check_ng_pattern(jenkinsfile.&is_match_class_format, ngs, common)) {
+    if (!check_ng_pattern(jenkinsfile.&is_match_class_format, ngs, common, sb)) {
         result = false
     }
 
-    common.print_result(result, "check_define_class")
     return result
 }
 
-def check_define_global_constant(def jenkinsfile, def common) {
+def check_define_global_constant(def jenkinsfile, def common, StringBuilder sb) {
     boolean result = true
 
     // OK パターン
     List oks = ["GLOBAL_CONSTANT_OK1 =",
                 "GLOBAL_CONSTANT_OK2   =   null"
                ]
-    if (!check_ok_pattern(jenkinsfile.&is_match_global_constant, oks, common)) {
+    if (!check_ok_pattern(jenkinsfile.&is_match_global_constant, oks, common, sb)) {
         result = false
     }
 
@@ -143,31 +157,61 @@ def check_define_global_constant(def jenkinsfile, def common) {
                 "GLOBAL_CONSTANT_NG2= null",     // 半角スペースない
                 "GLOBAL_CONSTANT_NG3 =null"      // 半角スペースない
                ]
-    if (!check_ng_pattern(jenkinsfile.&is_match_global_constant, ngs, common)) {
+    if (!check_ng_pattern(jenkinsfile.&is_match_global_constant, ngs, common, sb)) {
         result = false
     }
 
-    common.print_result(result, "check_define_global_constant")
     return result
 }
 
-def check_define_global_var(def jenkinsfile, def common) {
+def check_define_func(def jenkinsfile, def common, StringBuilder sb) {
+    boolean result = true
+
+    // OK パターン
+    List oks = ["def func_define_ok1() {",
+                "def func_define_ok2(int arg) {",
+                "def func_define_ok3(int arg1, String arg2) {",
+                "def func_define_ok4(int arg1,"
+               ]
+    if (!check_ok_pattern(jenkinsfile.&is_match_func_format, oks, common, sb)) {
+        result = false
+    }
+
+    // NG パターン
+    List ngs = ["def func_define_ng1( ) {",                      // 半角スペース余計
+                "def func_define_ng2(){",                        // 半角スペースない
+                "def func_define_ng3( int arg1) {",              // 半角スペース余計
+                "def func_define_ng4(int arg1,  int arg2) {",    // 半角スペース余計
+                "def func_define_ng5(int  arg) {"                // 半角スペース余計
+               ]
+    if (!check_ng_pattern(jenkinsfile.&is_match_func_format, ngs, common, sb)) {
+        result = false
+    }
+
+    return result
+}
+
+def check_define_global_var(def jenkinsfile, def common, StringBuilder sb) {
     // TODO: 実装
 }
 
-def check_ok_pattern(MethodClosure test_func, List oks, def common) {
-    // MethodClosure を使うと以下警告が出るが、無視してOK
-    // expected to call org.codehaus.groovy.runtime.MethodClosure.call but wound up catching Script4.is_match_class_format; see: https://jenkins.io/redirect/pipeline-cps-method-mismatches/
+def check_ok_pattern(MethodClosure test_func, List oks, def common, StringBuilder sb) {
+    // MethodClosure を使うと以下警告が出るが、狙い通りの関数が catching されてれば OK
+    // expected to call org.codehaus.groovy.runtime.MethodClosure.call but wound up catching Script3.check_comment; see: https://jenkins.io/redirect/pipeline-cps-method-mismatches/
+    //
+    // 意訳(多分)
+    //  -> MethodClosure.call() は CPS 変換されるが、MethodClosure.call() は内部的に非 CPS なので挙動に齟齬が発生、
+    //     仕様としてクロージャの最初の戻り値が返ることになる
     List results = oks.collect {
-        common.is_true(test_func(it, 1), it)
+        common.is_true(test_func(it, 1), it, sb)
     }
 
     return common.did_success_all(results)
 }
 
-def check_ng_pattern(MethodClosure test_func, List ngs, def common) {
+def check_ng_pattern(MethodClosure test_func, List ngs, def common, StringBuilder sb) {
     List results = ngs.collect {
-        common.is_false(test_func(it, 1), it)
+        common.is_false(test_func(it, 1), it, sb)
     }
 
     return common.did_success_all(results)

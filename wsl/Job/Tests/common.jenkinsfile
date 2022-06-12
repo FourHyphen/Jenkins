@@ -60,45 +60,65 @@ def load_script(String load_script_path) {
     return script
 }
 
-def is_true(def actual, String print_if_ng) {
+def is_true(def actual, String print_if_ng, StringBuilder sb = null) {
     if (!actual) {
-        println("check NG... ${print_if_ng}: expected: true / actual: false")
+        String str = "check NG |${print_if_ng}: expected: true / actual: false"
+        if (sb == null) {
+            println(str)
+        } else {
+            sb.append("${str}\n")
+        }
         return false
     }
 
     return true
 }
 
-def is_false(def actual, String print_if_ng) {
+def is_false(def actual, String print_if_ng, StringBuilder sb = null) {
     if (actual) {
-        println("check NG... ${print_if_ng}: expected: false / actual: true")
+        String str = "check NG |${print_if_ng}: expected: false / actual: true"
+        if (sb == null) {
+            println(str)
+        } else {
+            sb.append("${str}\n")
+        }
         return false
     }
 
     return true
 }
 
-def are_equals(def expected, def actual) {
+def are_equals(def expected, def actual, String print_if_ng, StringBuilder sb = null) {
     if (expected == actual) {
         return true
     }
 
-    println("check NG...  expected: ${expected} / actual: ${actual}")
+    String str = "check NG |${print_if_ng}: expected: ${expected} / actual: ${actual}"
+    if (sb == null) {
+        println(str)
+    } else {
+        sb.append("${str}\n")
+    }
     return false
 }
 
-def is_contains(def list, def expected) {
+def is_contains(def list, def expected, String print_if_ng, StringBuilder sb = null) {
     if (list.count { it.contains(expected) } > 0) {
         return true
     }
 
-    println("check NG...  expected: list contains ${expected} / actual: not contains")
+    String str = "check NG |${print_if_ng}: expected: list contains ${expected} / actual: not contains"
+    if (sb == null) {
+        println(str)
+    } else {
+        sb.append("${str}\n")
+    }
     return false
 }
 
-def print_result(boolean result, String method_name) {
+def get_result_str(boolean result, String method_name) {
     String res = result ? "OK" : "NG"
-    println("${method_name} ... ${res}")
+    return "${method_name} ... ${res}"
 }
 
 def did_success_all(List results) {
