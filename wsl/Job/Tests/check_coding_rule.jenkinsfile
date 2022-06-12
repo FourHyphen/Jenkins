@@ -189,6 +189,12 @@ def is_ok_define(String line, int line_num) {
         return is_match_global_constant(line, line_num)
     }
 
+    // グローバル変数定義行
+    if ((line =~ /^g.+?=/)) {
+        debug_dump("global var: ${line}")
+        return is_match_global_variable(line, line_num)
+    }
+
     return true
 }
 
@@ -262,12 +268,21 @@ def is_match_global_constant(String line, int line_num) {
     return true
 }
 
+def is_match_global_variable(String line, int line_num) {
+    if (!(line =~ /^g_[a-z0-9_]+ += +/) && !(line =~ /^g_[a-z0-9_]+ +=$/)) {
+        result_append("[ERROR] line ${line_num}: ${line}\n    global variable format -> ^g_[a-z0-9_]+ += +")
+        return false
+    }
+
+    return true
+}
+
 ////////////////////////////////////////////////////////////
 // 処理行
 ////////////////////////////////////////////////////////////
 def is_ok_process(String line, int line_num) {
     // if 行
-    if (line =~ /if[ \\(]/) {
+    if (line =~ /if[ ?\\(]/) {
         debug_dump("if: ${line}")
         return is_match_if_format(line, line_num)
     }
@@ -284,16 +299,16 @@ def is_ok_process(String line, int line_num) {
         return is_match_regex_format(line, line_num)
     }
 
-    // 変数への代入行
-    if (line.contains("=")) {
-        debug_dump("var: ${line}")
-        return is_match_var_format(line, line_num)
-    }
-
     // return
     if (line.contains("return ")) {
         debug_dump("return: ${line}")
         return is_match_return_format(line, line_num)
+    }
+
+    // 変数への代入行
+    if (line =~ /[a-z0-9_] *=/) {
+        debug_dump("var: ${line}")
+        return is_match_var_format(line, line_num)
     }
 
     return true
@@ -301,12 +316,33 @@ def is_ok_process(String line, int line_num) {
 
 def is_match_if_format(String line, int line_num) {
     boolean result = true
-    if (!(line =~ /if \([^ ]/)) {
+    if (!(line =~ /if \([^ ].*?[^ ]\)/)) {
         result_append("[ERROR] line ${line_num}: ${line}\n    if format -> if \\([^ ]")
         result = false
     }
 
-    if (line.contains("==") || line.contains("!=")) {
+    if (line =~ /\{ *$/) {
+        // 1 行の中に { がある場合
+        if (!(line =~ /\) \{$/)) {
+            result_append("[ERROR] line ${line_num}: ${line}\n    if format -> ) {\$")
+            result = false
+        }
+    } else {
+        if (!(line =~ /\) +[A-Za-z]/)) {
+            result_append("[ERROR] line ${line_num}: ${line}\n    if format -> ) +[A-Za-z]")
+            result = false
+        }
+    }
+
+    // else if の場合
+    if (line =~ /else +if/) {
+        if (!(line =~ /\} else if \(/)) {
+            result_append("[ERROR] line ${line_num}: ${line}\n    if format -> } else if (")
+            result = false
+        }
+    }
+
+    if (line.contains("==") || line.contains("!=") || line.contains("||") || line.contains("&&")) {
         if (!is_match_judge_format(line, line_num)) {
             result = false
         }
@@ -349,7 +385,7 @@ def is_match_regex_format(String line, int line_num) {
 
 def is_match_var_format(String line, int line_num) {
     // 代入値が下の行に記載されている場合
-    if (line =~ / = ?$/) {
+    if (line =~ / =$/) {
         return true
     }
 

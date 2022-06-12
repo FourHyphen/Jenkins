@@ -60,7 +60,7 @@ def load_script(String load_script_path) {
     return script
 }
 
-def is_true(def actual, String print_if_ng, StringBuilder sb = null) {
+def is_true(def actual, String print_if_ng = null, StringBuilder sb = null) {
     if (!actual) {
         String str = "check NG |${print_if_ng}: expected: true / actual: false"
         if (sb == null) {
@@ -74,7 +74,7 @@ def is_true(def actual, String print_if_ng, StringBuilder sb = null) {
     return true
 }
 
-def is_false(def actual, String print_if_ng, StringBuilder sb = null) {
+def is_false(def actual, String print_if_ng = null, StringBuilder sb = null) {
     if (actual) {
         String str = "check NG |${print_if_ng}: expected: false / actual: true"
         if (sb == null) {
@@ -88,7 +88,7 @@ def is_false(def actual, String print_if_ng, StringBuilder sb = null) {
     return true
 }
 
-def are_equals(def expected, def actual, String print_if_ng, StringBuilder sb = null) {
+def are_equals(def expected, def actual, String print_if_ng = null, StringBuilder sb = null) {
     if (expected == actual) {
         return true
     }
@@ -102,7 +102,7 @@ def are_equals(def expected, def actual, String print_if_ng, StringBuilder sb = 
     return false
 }
 
-def is_contains(def list, def expected, String print_if_ng, StringBuilder sb = null) {
+def is_contains(def list, def expected, String print_if_ng = null, StringBuilder sb = null) {
     if (list.count { it.contains(expected) } > 0) {
         return true
     }

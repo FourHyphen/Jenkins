@@ -9,7 +9,12 @@ def test_suite(def test_target_jenkinsfile, def common) {
                   this.&check_line_tail,
                   this.&check_define_class,
                   this.&check_define_global_constant,
-                  this.&check_define_func
+                  this.&check_define_global_variable,
+                  this.&check_define_func,
+                  this.&check_process_judge,
+                  this.&check_process_if,
+                  this.&check_process_return,
+                  this.&check_process_var
                   ]
 
     // テスト実施
@@ -164,6 +169,30 @@ def check_define_global_constant(def jenkinsfile, def common, StringBuilder sb) 
     return result
 }
 
+def check_define_global_variable(def jenkinsfile, def common, StringBuilder sb) {
+    boolean result = true
+
+    // OK パターン
+    List oks = ["g_value = null",
+                "g_value  =  null",    // 縦に合わせる場合があるので半角スペースが 1 つでも入ってれば OK
+                "g_value  ="           // 次の行に初期値記載の場合
+               ]
+    if (!check_ok_pattern(jenkinsfile.&is_match_global_variable, oks, common, sb)) {
+        result = false
+    }
+
+    // NG パターン
+    List ngs = ["g_valuE = null",    // 大文字使用
+                "g_value= null",     // 半角スペースない
+                "g_value =null"      // 半角スペースない
+               ]
+    if (!check_ng_pattern(jenkinsfile.&is_match_global_variable, ngs, common, sb)) {
+        result = false
+    }
+
+    return result
+}
+
 def check_define_func(def jenkinsfile, def common, StringBuilder sb) {
     boolean result = true
 
@@ -191,8 +220,125 @@ def check_define_func(def jenkinsfile, def common, StringBuilder sb) {
     return result
 }
 
-def check_define_global_var(def jenkinsfile, def common, StringBuilder sb) {
-    // TODO: 実装
+def check_process_judge(def jenkinsfile, def common, StringBuilder sb) {
+    boolean result = true
+
+    // OK パターン
+    List oks = ["    true == true",
+                "    (true != false)",
+                "    true == true && true == true",
+                "    (true == true) || (true == true)"
+               ]
+    if (!check_ok_pattern(jenkinsfile.&is_match_judge_format, oks, common, sb)) {
+        result = false
+    }
+
+    // NG パターン
+    List ngs = ["    false== false",                          // 半角スペース不足
+                "    false ==false",                          // 半角スペース不足
+                "    false!= false",                          // 半角スペース不足
+                "    false !=false",                          // 半角スペース不足
+                "    false == false&& false == false",        // 半角スペース不足
+                "    (false == false) &&(false == false)",    // 半角スペース不足
+                "    (false == false)|| (false == false)",    // 半角スペース不足
+                "    false == false ||false == false"         // 半角スペース不足
+               ]
+    if (!check_ng_pattern(jenkinsfile.&is_match_judge_format, ngs, common, sb)) {
+        result = false
+    }
+
+    return result
+}
+
+def check_process_if(def jenkinsfile, def common, StringBuilder sb) {
+    boolean result = true
+
+    // 注意: ここでは "} else {" はチェックしない、あくまで if 宣言行のみのチェック
+    // OK パターン
+    List oks = ["    if (true == true) {",
+                "    } else if (true != false) {",
+                "    if (bool) {",
+                "    if (true == true)         return true",    // このように縦を合わせる場合もありえるので半角スペース複数は OK
+                "    } else if (true != false) return true",
+                "    if (bool) return true"
+               ]
+    if (!check_ok_pattern(jenkinsfile.&is_match_if_format, oks, common, sb)) {
+        result = false
+    }
+
+    // NG パターン
+    List ngs = ["    if  (false == false) {",         // 半角スペース余計
+                "    if(false == false) {",           // 半角スペース不足
+                "    if (false == false)  {",         // 半角スペース余計
+                "    }else if (false == false) {",    // 半角スペース不足
+                "    } else  if (false == false) {",  // 半角スペース余計
+                "    else if (false == false) {",     // } だけで 1 行になってる
+                "    if ( bool) {",                   // 半角スペース余計
+                "    if (bool ) {",                   // 半角スペース余計
+                "    if (bool){",                     // 半角スペース不足
+                "    if (bool)  {",                   // 半角スペース余計
+                "    if (false == false)return"       // 半角スペース不足
+               ]
+    if (!check_ng_pattern(jenkinsfile.&is_match_if_format, ngs, common, sb)) {
+        result = false
+    }
+
+    return result
+}
+
+def check_process_return(def jenkinsfile, def common, StringBuilder sb) {
+    boolean result = true
+
+    // OK パターン
+    List oks = ["    return true",
+                "return this",
+                "    return"          // return だけは OK
+               ]
+    if (!check_ok_pattern(jenkinsfile.&is_match_return_format, oks, common, sb)) {
+        result = false
+    }
+
+    // NG パターン
+    List ngs = ["return  false"    // 半角スペース余計
+               ]
+    if (!check_ng_pattern(jenkinsfile.&is_match_return_format, ngs, common, sb)) {
+        result = false
+    }
+
+    return result
+}
+
+def check_process_var(def jenkinsfile, def common, StringBuilder sb) {
+    boolean result = true
+
+    // OK パターン
+    List oks = ["    String value = \"tmp\"",
+                "    String value =    \"tmp\"",    // 縦を合わせる場合あり
+                "    String value =",               // 次の行にまたがる場合
+                "    value = null",                 // ローカル変数への代入
+                "    g_value = 1",                  // グローバル変数への代入
+                "    g_value ="                     // 次の行にまたがる場合
+               ]
+    if (!check_ok_pattern(jenkinsfile.&is_match_var_format, oks, common, sb)) {
+        result = false
+    }
+
+    // NG パターン
+    List ngs = ["    String value= null",    // 半角スペース不足
+                "    String value =null",    // 半角スペース不足
+                "    value= null",           // 半角スペース不足
+                "    value =null",           // 半角スペース不足
+                "    g_value =null",         // 半角スペース不足
+                "    g_value= null"          // 半角スペース不足
+               ]
+    if (!check_ng_pattern(jenkinsfile.&is_match_var_format, ngs, common, sb)) {
+        result = false
+    }
+
+    // 本当はチェックしたいが無視するパターン
+    // "    value= null"    // ローカル変数への代入チェックはパターンいろいろで厳しい？
+
+    return result
 }
 
 def check_ok_pattern(MethodClosure test_func, List oks, def common, StringBuilder sb) {

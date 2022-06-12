@@ -1,35 +1,54 @@
+import org.codehaus.groovy.runtime.MethodClosure    /* MethodClosure */
+
 // test_target_jenkinsfile -> テスト対象 jenkinsfile の load 結果
 // common -> common.jenkinsfile の load 結果
 def test_suite(def test_target_jenkinsfile, def common) {
+    // "this." は省略不可
+    List tests = [this.&test_pre_process,
+                  this.&test_convert_path_table
+                 ]
+
     // テスト実施
-    List results = []
-    results.add(test_pre_process(test_target_jenkinsfile, common))
-    results.add(test_convert_path_table(test_target_jenkinsfile, common))
+    StringBuilder sb = new StringBuilder()
+    List results = tests.collect {
+        boolean result = it(test_target_jenkinsfile, common, sb)
+        sb.append(common.get_result_str(result, it.getMethod()) + "\n\n")
+        return result
+    }
 
     // 結果確認
-    return common.did_success_all(results)
+    boolean did_success_all = common.did_success_all(results)
+
+    // 結果整理
+    sb.append("------------\n")
+    sb.append("OK: ${results.count(true)} / NG: ${results.count(false)}\n")
+    did_success_all ? sb.append("test ... OK") : sb.append("test ... NG!")
+
+    // 結果表示
+    println(sb.toString())
+
+    return did_success_all
 }
 
-def test_pre_process(def jenkinsfile, def common) {
+def test_pre_process(def jenkinsfile, def common, StringBuilder sb) {
     def set_str = 'test str'
     jenkinsfile.pre_process(set_str)
 
     Boolean result = true
-    if (!common.are_equals('test str', jenkinsfile.g_value1)) {
+    if (!common.are_equals('test str', jenkinsfile.g_value1, null, sb)) {
         result = false
     }
 
     def log = common.get_current_log(10)
     println(log)
-    if (!common.is_contains(log, '''$"`'|%.:+=!?<>&@''')) {
+    if (!common.is_contains(log, '''$"`'|%.:+=!?<>&@''', null, sb)) {
         result = false
     }
 
-    common.print_result(result, "test_pre_process")
     return result
 }
 
-def test_convert_path_table(def jenkinsfile, def common) {
+def test_convert_path_table(def jenkinsfile, def common, StringBuilder sb) {
     String tsv =
 '''
 ID	TMP	UNC
@@ -40,21 +59,21 @@ ID	TMP	UNC
 
     // 対応表として有効な行だけを読むことの確認
     List path_tables = jenkinsfile.convert_path_table_string_to_list(tsv)
-    if (!common.are_equals(2, path_tables.size())) {
+    if (!common.are_equals(2, path_tables.size(), null, sb)) {
         result = false
     }
 
     // 中身の確認([1] が問題ないなら [0] も問題ないと判断、[1] のみ確認)
-    if (!common.are_equals("//172.168.2.222/dir2", path_tables[1].ip_mount_path) ||
-        !common.are_equals("\\\\server2\\root\\share22\\folder", path_tables[1].unc_mount_path) ||
-        !common.are_equals("22", path_tables[1].share_num)) {
+    if (!common.are_equals("//172.168.2.222/dir2", path_tables[1].ip_mount_path, null, sb) ||
+        !common.are_equals("\\\\server2\\root\\share22\\folder", path_tables[1].unc_mount_path, null, sb) ||
+        !common.are_equals("22", path_tables[1].share_num, null, sb)) {
         result = false
     }
 
     // Windows UNC path の変換処理
     String unc_path = "\\\\server1\\root\\share11\\folder\\relative\\file_name"
     String converted = jenkinsfile.convert_path(path_tables, unc_path)
-    if (!common.are_equals('//172.168.111.1/dir1/relative/file_name', converted)) {
+    if (!common.are_equals('//172.168.111.1/dir1/relative/file_name', converted, null, sb)) {
         result = false
     }
 
@@ -68,7 +87,6 @@ ID	TMP	UNC
         // OK
     }
 
-    common.print_result(result, "test_convert_path_table")
     return result
 }
 
