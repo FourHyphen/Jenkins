@@ -4,7 +4,8 @@ import org.codehaus.groovy.runtime.MethodClosure    /* MethodClosure */
 // common -> common.jenkinsfile の load 結果
 def test_suite(def test_target_jenkinsfile, def common) {
     // "this." は省略不可
-    List tests = [this.&check_comment,
+    List tests = [this.&check_skip_lines,
+                  this.&check_comment,
                   this.&check_indent,
                   this.&check_line_tail,
                   this.&check_define_class,
@@ -37,6 +38,46 @@ def test_suite(def test_target_jenkinsfile, def common) {
     println(sb.toString())
 
     return did_success_all
+}
+
+def check_skip_lines(def jenkinsfile, def common, StringBuilder sb) {
+    boolean result = true
+
+    List test = []
+    test.add("g_not_skip = null")                       //  1行目
+    test.add("// g_skip = null")                        //  2
+    test.add("g_not_skip = null // not_skip")           //  3
+    test.add("/* g_skip = null */")                     //  4
+    test.add("g_not_skip = /* not skip */ null")        //  5
+    test.add("g_not_skip = null /* not skip */")        //  6
+    test.add("/* not skip */ g_not_skip = null")        //  7
+    test.add("/*")                                      //  8
+    test.add("g_skip = null")                           //  9
+    test.add("*/")                                      // 10
+    test.add("/* g_skip = null")                        // 11
+    test.add("*/")                                      // 12
+    test.add("    ")                                    // 13    インデントのみの行はスキップしない
+    test.add("")                                        // 14    何もない行はスキップしない
+    test.add("g_not_skip = \"\"\"some string\"\"\"")    // 15
+    test.add("g_not_skip = \"\"\" ")                    // 16
+    test.add("skip")                                    // 17
+    test.add("    \"\"\"")                              // 18
+    // test.add("g_not_skip = '''some string'''")    // 19
+    // test.add("g_not_skip = ''' ")                    // 20
+    // test.add("skip")                                    // 21
+    // test.add("    '''")                              // 22
+
+    List expected = [2, 4, 8, 9, 10, 11, 12, 17/*, 21*/]
+    List skips = jenkinsfile.get_skip_line_nums(test)
+    test.each {
+        sb.append(it)
+    }
+
+    if (!common.are_equals(expected, skips, "", sb)) {
+        result = false
+    }
+
+    return result
 }
 
 def check_comment(def jenkinsfile, def common, StringBuilder sb) {

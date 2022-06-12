@@ -11,51 +11,34 @@ def is_applied(String jenkinsfile_path, def common_jenkinsfile) {
 
 def is_applied_core(String jenkinsfile_path, def common_jenkinsfile) {
     String text = common_jenkinsfile.read_file(jenkinsfile_path)
-
-    // (?m) -> 複数行マッチモード(^ が改行文字直後の行頭にマッチする)
-    // (?s) -> DotAll モード(. が改行文字にもマッチする)
     boolean result = true
-    boolean during_string_single_quote = false
-    boolean during_string_double_quote = false
     int line_num = 0
 
-    for(String line in text.split("\n")) {
+    List lines = text.split("\n")
+    List skip_line_nums = get_skip_line_nums(lines)
+
+    for(String line in lines) {
         line_num++
-
-        // ''' や """ で括られている間の行の場合、その括りの終了を確認(規約は見ない)
-        if (during_string_single_quote) {
-            if (num_of_single_quote_triple(line) == 1) {
-                during_string_single_quote = false
-                result_append("line ${line_num} : ''' end  : ${line}")
-            } else {
-                debug_dump("'''      : ${line}")
-            }
-            continue
-        }
-
-        if (during_string_double_quote) {
-            if (num_of_single_double_triple(line) == 1) {
-                during_string_double_quote = false
-                result_append("line ${line_num} : \"\"\" end  : ${line}")
-            } else {
-                debug_dump("\"\"\"      : ${line}")
-            }
-            continue
-        }
 
         // コメントのチェック(NG パターンと混在している場合もあるので結果を無視する)
         is_ok_comment(line, line_num)
 
+        // インデントチェック(複数行に渡る場合の整形もあるので結果を無視する)
         int indent_num = get_indent_num(line)
+        is_ok_indent_num(line, line_num)
+
+        // チェックスキップする行なら他には何も見ない
+        if (skip_line_nums.contains(line_num)) {
+            println("skip: line ${line_num}")
+            continue
+        }
+
         if (indent_num == 0) {
             // インデントなしなら何らかの定義行
             if (!is_ok_define(line, line_num)) {
                 result = false
             }
         } else {
-            // インデントチェック(複数行に渡る場合の整形もあるので結果を無視する)
-            is_ok_indent_num(line, line_num)
-
             // 行末に余計なスペースがある場合は NG (インデントのみの行もここで NG とする)
             if (!is_ok_line_tail(line, line_num)) {
                 result = false
@@ -65,15 +48,6 @@ def is_applied_core(String jenkinsfile_path, def common_jenkinsfile) {
             if (!is_ok_process(line, line_num)) {
                 result = false
             }
-        }
-
-        // ''' や """ で括り始める行の場合、その括りの終了までチェックしないようフラグ立て
-        if (num_of_single_quote_triple(line) == 1) {
-            during_string_single_quote = true
-            result_append("line ${line_num} : ''' start: ${line}")
-        } else if (num_of_double_quote_triple(line) == 1) {
-            during_string_double_quote = true
-            result_append("line ${line_num} : \"\"\" start: ${line}")
         }
     }
 
@@ -89,19 +63,102 @@ def result_append(String str) {
 }
 
 ////////////////////////////////////////////////////////////
-// ''' や """ で括られた範囲に関する処理
+// スキップ行決定
 ////////////////////////////////////////////////////////////
-def num_of_single_quote_triple(String line) {
-    def triple_match = /'''/
-    return match_num(triple_match, line)
+def get_skip_line_nums(List lines) {
+    int line_num = 0
+    // boolean during_string_single_quote = false
+    boolean during_string_double_quote = false
+    boolean during_comment = false
+
+    List skips = []
+    for(String line in lines) {
+        line_num++
+
+        if (during_comment) {
+            if (line =~ /\*\//) {
+                // 行中に "*/" があればスキップ継続を終了
+                during_comment = false
+
+                // 行末が "*/" ならこの行もスキップする
+                if (line =~ /\*\/ *$/) {
+                    skips.add(line_num)
+                    continue
+                }
+            } else {
+                // でなければスキップ継続
+                skips.add(line_num)
+                continue
+            }
+        }
+
+        // if (during_string_single_quote) {
+        //     // ''' で閉じていればスキップ終了
+        //     if (match_num(line, /'''/) == 1) {
+        //         during_string_single_quote = false
+        //     } else {
+        //         // でなければスキップ継続
+        //         skips.add(line_num)
+        //         continue
+        //     }
+        // }
+
+        if (during_string_double_quote) {
+            // """ で閉じていればスキップ終了
+            if (match_num(line, '"""') == 1) {
+                during_string_double_quote = false
+            } else {
+                // でなければスキップ継続
+                skips.add(line_num)
+                continue
+            }
+        }
+
+        // "// 開始行はこの行だけスキップ"
+        if (line =~ "^ *//") {
+            skips.add(line_num)
+            continue
+        }
+
+        // "/*" 開始行
+        if (line =~ /^ *\/\*/) {
+            if (line =~ /\*\/ *$/) {
+                // 同じ行の終わりに "*/" があれば、この行だけスキップ
+                skips.add(line_num)
+                continue
+            } else if (line =~ /\*\//){
+                // 行の途中に "*/" があれば、この行は処理の記載があるのでスキップしない
+                continue
+            } else {
+                // スキップ継続を開始
+                skips.add(line_num)
+                during_comment = true
+                continue
+            }
+        }
+
+        // ここに到達するならコメント以外でのスキップ要因
+        // // ''' の行は、同じ行で ''' で閉じていればスキップしない
+        // if ((match_num(line, /'''/) % 2) == 1) {
+        //     println("skip start: ${line} ${line_num}")
+        //     during_string_single_quote = true
+        //     continue
+        // }
+
+        // """ の行は、同じ行で """ で閉じていればスキップしない
+        if ((match_num(line, '"""') % 2) == 1) {
+            during_string_double_quote = true
+            continue
+        }
+    }
+
+    return skips
 }
 
-def num_of_double_quote_triple(String line) {
-    def triple_match = /"""/
-    return match_num(triple_match, line)
-}
-
-def match_num(def regex, String str) {
+//////////////////////////////
+// ''' や """ で括られた範囲に関する処理
+//////////////////////////////
+def match_num(String str, def regex) {
     return (str =~ regex).size()
 }
 
