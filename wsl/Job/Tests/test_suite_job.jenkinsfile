@@ -29,7 +29,7 @@ def execute_all_unit_test(String jenkins_user_name, String jenkins_user_password
 }
 
 def get_unit_test_folder_json(String jenkins_user_name, String jenkins_user_password, String jenkins_unit_test_folder_url) {
-    String json_str = sh(returnStdout: true, script: "curl -u ${jenkins_user_name}:${jenkins_user_password} ${jenkins_unit_test_folder_url}api/json")
+    String json_str = sh(returnStdout: true, script: "set +x ; export no_proxy=localhost ; curl -u ${jenkins_user_name}:${jenkins_user_password} ${jenkins_unit_test_folder_url}api/json")
 
     // JsonSlurper は内部的には遅延 Map でマルチスレッド NG のため Classic を使用
     return new JsonSlurperClassic().parseText(json_str)
