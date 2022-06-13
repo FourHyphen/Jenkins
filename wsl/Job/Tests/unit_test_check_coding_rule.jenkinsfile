@@ -62,16 +62,13 @@ def check_skip_lines(def jenkinsfile, def common, StringBuilder sb) {
     test.add("g_not_skip = \"\"\" ")                    // 16
     test.add("skip")                                    // 17
     test.add("    \"\"\"")                              // 18
-    // test.add("g_not_skip = '''some string'''")    // 19
-    // test.add("g_not_skip = ''' ")                    // 20
-    // test.add("skip")                                    // 21
-    // test.add("    '''")                              // 22
+    test.add("g_not_skip = '''some string'''")          // 19
+    test.add("g_not_skip = ''' ")                       // 20
+    test.add("skip")                                    // 21
+    test.add("    '''")                                 // 22
 
-    List expected = [2, 4, 8, 9, 10, 11, 12, 17/*, 21*/]
+    List expected = [2, 4, 8, 9, 10, 11, 12, 17, 21]
     List skips = jenkinsfile.get_skip_line_nums(test)
-    test.each {
-        sb.append(it)
-    }
 
     if (!common.are_equals(expected, skips, "", sb)) {
         result = false

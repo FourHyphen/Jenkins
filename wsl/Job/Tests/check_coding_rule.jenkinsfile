@@ -20,31 +20,31 @@ def is_applied_core(String jenkinsfile_path, def common_jenkinsfile) {
     for(String line in lines) {
         line_num++
 
-        // コメントのチェック(NG パターンと混在している場合もあるので結果を無視する)
+        /* コメントのチェック(NG パターンと混在している場合もあるので結果を無視する) */
         is_ok_comment(line, line_num)
 
-        // インデントチェック(複数行に渡る場合の整形もあるので結果を無視する)
+        /* インデントチェック(複数行に渡る場合の整形もあるので結果を無視する) */
         int indent_num = get_indent_num(line)
         is_ok_indent_num(line, line_num)
 
-        // チェックスキップする行なら他には何も見ない
+        /* チェックスキップする行なら他には何も見ない */
         if (skip_line_nums.contains(line_num)) {
-            println("skip: line ${line_num}")
+            debug_dump("skip: line ${line_num}")
             continue
         }
 
         if (indent_num == 0) {
-            // インデントなしなら何らかの定義行
+            /* インデントなしなら何らかの定義行 */
             if (!is_ok_define(line, line_num)) {
                 result = false
             }
         } else {
-            // 行末に余計なスペースがある場合は NG (インデントのみの行もここで NG とする)
+            /* 行末に余計なスペースがある場合は NG (インデントのみの行もここで NG とする) */
             if (!is_ok_line_tail(line, line_num)) {
                 result = false
             }
 
-            // 処理に関する行のチェック
+            /* 処理に関する行のチェック */
             if (!is_ok_process(line, line_num)) {
                 result = false
             }
@@ -55,19 +55,19 @@ def is_applied_core(String jenkinsfile_path, def common_jenkinsfile) {
     return result
 }
 
-////////////////////////////////////////////////////////////
-// チェック結果の管理
-////////////////////////////////////////////////////////////
+/**********************************************************
+チェック結果の管理
+**********************************************************/
 def result_append(String str) {
     g_check_all_result_builder.append("${str}\n")
 }
 
-////////////////////////////////////////////////////////////
-// スキップ行決定
-////////////////////////////////////////////////////////////
+/**********************************************************
+スキップ行決定
+**********************************************************/
 def get_skip_line_nums(List lines) {
     int line_num = 0
-    // boolean during_string_single_quote = false
+    boolean during_string_single_quote = false
     boolean during_string_double_quote = false
     boolean during_comment = false
 
@@ -86,35 +86,39 @@ def get_skip_line_nums(List lines) {
                     continue
                 }
             } else {
-                // でなければスキップ継続
+                /* でなければスキップ継続 */
                 skips.add(line_num)
                 continue
             }
         }
 
-        // if (during_string_single_quote) {
-        //     // ''' で閉じていればスキップ終了
-        //     if (match_num(line, /'''/) == 1) {
-        //         during_string_single_quote = false
-        //     } else {
-        //         // でなければスキップ継続
-        //         skips.add(line_num)
-        //         continue
-        //     }
-        // }
+        if (during_string_single_quote) {
+            /* ''' で閉じていればスキップ終了 */
+            if (match_num(line, /'''/) == 1) {
+                println("skip finish ''': ${line} ${line_num}")
+                during_string_single_quote = false
+                continue
+            } else {
+                /* でなければスキップ継続 */
+                skips.add(line_num)
+                continue
+            }
+        }
 
         if (during_string_double_quote) {
-            // """ で閉じていればスキップ終了
+            /* """ で閉じていればスキップ終了 */
             if (match_num(line, '"""') == 1) {
+                println("skip finish \"\"\": ${line} ${line_num}")
                 during_string_double_quote = false
+                continue
             } else {
-                // でなければスキップ継続
+                /* でなければスキップ継続 */
                 skips.add(line_num)
                 continue
             }
         }
 
-        // "// 開始行はこの行だけスキップ"
+        /* "//" 開始行はこの行だけスキップ */
         if (line =~ "^ *//") {
             skips.add(line_num)
             continue
@@ -130,23 +134,24 @@ def get_skip_line_nums(List lines) {
                 // 行の途中に "*/" があれば、この行は処理の記載があるのでスキップしない
                 continue
             } else {
-                // スキップ継続を開始
+                /* スキップ継続を開始 */
                 skips.add(line_num)
                 during_comment = true
                 continue
             }
         }
 
-        // ここに到達するならコメント以外でのスキップ要因
-        // // ''' の行は、同じ行で ''' で閉じていればスキップしない
-        // if ((match_num(line, /'''/) % 2) == 1) {
-        //     println("skip start: ${line} ${line_num}")
-        //     during_string_single_quote = true
-        //     continue
-        // }
+        /* ここに到達するならコメント以外でのスキップ要因 */
+        /* ''' の行は、同じ行で ''' で閉じていればスキップしない */
+        if ((match_num(line, /'''/) % 2) == 1) {
+            println("skip start ''': ${line} ${line_num}")
+            during_string_single_quote = true
+            continue
+        }
 
-        // """ の行は、同じ行で """ で閉じていればスキップしない
+        /* """ の行は、同じ行で """ で閉じていればスキップしない */
         if ((match_num(line, '"""') % 2) == 1) {
+            println("skip start \"\"\": ${line} ${line_num}")
             during_string_double_quote = true
             continue
         }
@@ -155,9 +160,9 @@ def get_skip_line_nums(List lines) {
     return skips
 }
 
-//////////////////////////////
-// ''' や """ で括られた範囲に関する処理
-//////////////////////////////
+/**********************************************************
+''' や """ で括られた範囲に関する処理
+**********************************************************/
 def match_num(String str, def regex) {
     return (str =~ regex).size()
 }
@@ -168,16 +173,16 @@ def debug_dump(String str) {
     }
 }
 
-////////////////////////////////////////////////////////////
-// コメント関連
-////////////////////////////////////////////////////////////
+/**********************************************************
+コメント関連
+**********************************************************/
 def is_ok_comment(String line, int line_num) {
-    // コメント関連の文字列が存在しないならチェック不要
+    /* コメント関連の文字列が存在しないならチェック不要 */
     if (!line.contains("//") && !line.contains("/*") && !line.contains("*/")) {
         return true
     }
 
-    // "    //" 等、インデント + "//" の行は NG
+    /* "    //" 等、インデント + "//" の行は NG */
     boolean result = true
     if (line =~ '^ *//') {
         result_append("[WARN] line ${line_num}: ${line}\n    comment -> /* ... */")
@@ -196,9 +201,9 @@ def is_ok_comment(String line, int line_num) {
     return result
 }
 
-////////////////////////////////////////////////////////////
-// インデント関連
-////////////////////////////////////////////////////////////
+/**********************************************************
+インデント関連
+**********************************************************/
 def get_indent_num(String line) {
     def indent_match = /^( )*/
     return (line =~ indent_match)[0][0].length()
@@ -215,7 +220,7 @@ def is_ok_indent_num(String line, int line_num) {
 }
 
 def is_ok_line_tail(String line, int line_num) {
-    // 行末にスペースがある場合は NG
+    /* 行末にスペースがある場合は NG */
     if (line =~ / +$/) {
         result_append("[ERROR] line ${line_num}: ${line}\n    not space at line tail")
         return false
@@ -224,29 +229,29 @@ def is_ok_line_tail(String line, int line_num) {
     return true
 }
 
-////////////////////////////////////////////////////////////
-// 定義行
-////////////////////////////////////////////////////////////
+/**********************************************************
+定義行
+**********************************************************/
 def is_ok_define(String line, int line_num) {
-    // クラス定義開始行
+    /* クラス定義開始行 */
     if ((line =~ /^class /)) {
         debug_dump("class: ${line}")
         return is_match_class_format(line, line_num)
     }
 
-    // 関数定義開始行
+    /* 関数定義開始行 */
     if ((line =~ /^def /)) {
         debug_dump("func: ${line}")
         return is_match_func_format(line, line_num)
     }
 
-    // グローバル定数定義行
+    /* グローバル定数定義行 */
     if ((line =~ /^[A-Z].+?=/)) {
         debug_dump("global constant: ${line}")
         return is_match_global_constant(line, line_num)
     }
 
-    // グローバル変数定義行
+    /* グローバル変数定義行 */
     if ((line =~ /^g.+?=/)) {
         debug_dump("global var: ${line}")
         return is_match_global_variable(line, line_num)
@@ -256,12 +261,12 @@ def is_ok_define(String line, int line_num) {
 }
 
 def is_match_class_format(String line, int line_num) {
-    // implements / extends あり
+    /* implements / extends あり */
     if (line =~ /(implements|extends)/) {
         return is_match_class_format_with_super(line, line_num)
     }
 
-    // 他
+    /* 他 */
     return is_match_class_format_simple(line, line_num)
 }
 
@@ -287,20 +292,20 @@ def is_match_func_format(String line, int line_num) {
     boolean result = true
     String match = ""
 
-    // 関数名や小かっこ
+    /* 関数名や小かっこ */
     match = "^def [^A-Z ]+\\((\\) \\{|[^ ].*?[^ ](,|\\) \\{))"
     if (!(line =~ match)) {
         result_append("[ERROR] line ${line_num}: ${line}\n    func format -> ${match}")
         result = false
     }
 
-    // 引数が存在しないならチェック終了
+    /* 引数が存在しないならチェック終了 */
     match = /\( ?\)/
     if ((line =~ match)) {
         return result
     }
 
-    // 小かっこ内、引数箇所
+    /* 小かっこ内、引数箇所 */
     String args = line.substring(line.indexOf("("))
     String reconstruct = ""
     (args =~ "[A-Za-z0-9_]+ [A-Za-z0-9_]+(\\)|, |,|)").each {
@@ -334,35 +339,35 @@ def is_match_global_variable(String line, int line_num) {
     return true
 }
 
-////////////////////////////////////////////////////////////
-// 処理行
-////////////////////////////////////////////////////////////
+/**********************************************************
+処理行
+**********************************************************/
 def is_ok_process(String line, int line_num) {
-    // if 行
+    /* if 行 */
     if (line =~ /if[ ?\\(]/) {
         debug_dump("if: ${line}")
         return is_match_if_format(line, line_num)
     }
 
-    // if 以外の条件判定行
+    /* if 以外の条件判定行 */
     if (line.contains("==") || line.contains("!=")) {
         debug_dump("judge(not if): ${line}")
         return is_match_judge_format(line, line_num)
     }
 
-    // 正規表現処理行
+    /* 正規表現処理行 */
     if (line.contains("=~")) {
         debug_dump("regex: ${line}")
         return is_match_regex_format(line, line_num)
     }
 
-    // return
+    /* return */
     if (line.contains("return ")) {
         debug_dump("return: ${line}")
         return is_match_return_format(line, line_num)
     }
 
-    // 変数への代入行
+    /* 変数への代入行 */
     if (line =~ /[a-z0-9_] *=/) {
         debug_dump("var: ${line}")
         return is_match_var_format(line, line_num)
@@ -379,7 +384,7 @@ def is_match_if_format(String line, int line_num) {
     }
 
     if (line =~ /\{ *$/) {
-        // 1 行の中に { がある場合
+        /* 1 行の中に { がある場合 */
         if (!(line =~ /\) \{$/)) {
             result_append("[ERROR] line ${line_num}: ${line}\n    if format -> ) {\$")
             result = false
@@ -391,7 +396,7 @@ def is_match_if_format(String line, int line_num) {
         }
     }
 
-    // else if の場合
+    /* else if の場合 */
     if (line =~ /else +if/) {
         if (!(line =~ /\} else if \(/)) {
             result_append("[ERROR] line ${line_num}: ${line}\n    if format -> } else if (")
@@ -441,12 +446,12 @@ def is_match_regex_format(String line, int line_num) {
 }
 
 def is_match_var_format(String line, int line_num) {
-    // 代入値が下の行に記載されている場合
+    /* 代入値が下の行に記載されている場合 */
     if (line =~ / =$/) {
         return true
     }
 
-    // 同じ行で代入を完結するならチェック
+    /* 同じ行で代入を完結するならチェック */
     if (!(line =~ / = /)) {
         result_append("[ERROR] line ${line_num}: ${line}\n    var format -> \" = \"")
         return false
@@ -456,7 +461,7 @@ def is_match_var_format(String line, int line_num) {
 }
 
 def is_match_return_format(String line, int line_num) {
-    // "return" だけなら OK
+    /* "return" だけなら OK */
     if (line =~ / *return$/) {
         return true
     }
