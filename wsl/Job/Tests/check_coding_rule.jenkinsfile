@@ -93,29 +93,25 @@ def get_skip_line_nums(List lines) {
         }
 
         if (during_string_single_quote) {
-            /* ''' で閉じていればスキップ終了 */
-            if (match_num(line, /'''/) == 1) {
-                println("skip finish ''': ${line} ${line_num}")
+            /* ''' でのスキップ中、スキップ終了判定 */
+            if (do_skip_finish(line, "'''", line_num)) {
                 during_string_single_quote = false
-                continue
             } else {
-                /* でなければスキップ継続 */
                 skips.add(line_num)
-                continue
             }
+            /* いずれにせよこの行はもうスキップ判定しない */
+            continue
         }
 
         if (during_string_double_quote) {
-            /* """ で閉じていればスキップ終了 */
-            if (match_num(line, '"""') == 1) {
-                println("skip finish \"\"\": ${line} ${line_num}")
+            /* """ でのスキップ中、スキップ終了判定 */
+            if (do_skip_finish(line, '"""', line_num)) {
                 during_string_double_quote = false
-                continue
             } else {
-                /* でなければスキップ継続 */
                 skips.add(line_num)
-                continue
             }
+            /* いずれにせよこの行はもうスキップ判定しない */
+            continue
         }
 
         /* "//" 開始行はこの行だけスキップ */
@@ -143,15 +139,13 @@ def get_skip_line_nums(List lines) {
 
         /* ここに到達するならコメント以外でのスキップ要因 */
         /* ''' の行は、同じ行で ''' で閉じていればスキップしない */
-        if ((match_num(line, /'''/) % 2) == 1) {
-            println("skip start ''': ${line} ${line_num}")
+        if (do_skip_start(line, "'''", line_num)) {
             during_string_single_quote = true
             continue
         }
 
         /* """ の行は、同じ行で """ で閉じていればスキップしない */
-        if ((match_num(line, '"""') % 2) == 1) {
-            println("skip start \"\"\": ${line} ${line_num}")
+        if (do_skip_start(line, '"""', line_num)) {
             during_string_double_quote = true
             continue
         }
@@ -160,9 +154,46 @@ def get_skip_line_nums(List lines) {
     return skips
 }
 
-/**********************************************************
-''' や """ で括られた範囲に関する処理
-**********************************************************/
+/* TODO: 判定が不完全な気がする、実戦投入後に再検討すること */
+def do_skip_start(String line, String skip_str, int line_num) {
+    /* スキップ開始文字列が、PG 中で文字列として扱われているならスキップしない */
+    /* 文字列の中に埋め込まれている場合 */
+    def regex = "\"[^\"]*?${skip_str}"
+    if (line =~ regex) {
+        return false
+    }
+
+    regex = "'[^']*?${skip_str}"
+    if (line =~ regex) {
+        return false
+    }
+
+    /* 正規表現の中に埋め込まれている場合 */
+    if (line.contains("/${skip_str}/")) {
+        return false
+    }
+
+    /* エスケープされている場合 */
+    String escaped = escape(skip_str)
+    if (line.contains(escaped)) {
+        return false
+    }
+
+    /* 上記いずれでもなく、かつスキップ開始文字列で開きっぱなしの場合にスキップを開始する */
+    if ((match_num(line, skip_str) % 2) == 1) {
+        println("skip start ${skip_str}: ${line} ${line_num}")
+        return true
+    }
+}
+
+def escape(String str) {
+    StringBuilder sb = new StringBuilder()
+    str.each {
+        sb.append("\\" + it)
+    }
+    return sb.toString()
+}
+
 def match_num(String str, def regex) {
     return (str =~ regex).size()
 }
@@ -171,6 +202,16 @@ def debug_dump(String str) {
     if (g_check_coding_rule_debug) {
         result_append("[DEBUG] ${str}")
     }
+}
+
+/* TODO: 判定が不完全な気がする、実戦投入後に再検討すること */
+def do_skip_finish(String line, String skip_str, int line_num) {
+    if (match_num(line, skip_str) == 1) {
+        println("skip finish ${skip_str}: ${line} ${line_num}")
+        return true
+    }
+
+    return false
 }
 
 /**********************************************************

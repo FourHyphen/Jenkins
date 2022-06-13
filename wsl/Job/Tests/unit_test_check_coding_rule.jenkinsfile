@@ -66,8 +66,20 @@ def check_skip_lines(def jenkinsfile, def common, StringBuilder sb) {
     test.add("g_not_skip = ''' ")                       // 20
     test.add("skip")                                    // 21
     test.add("    '''")                                 // 22
+    test.add("if (match_num(line, /'''/) == 1) {")      // 23    文字列としての'''はスキップしない
+    test.add("    return true")                         // 24
+    test.add("// g_skip = null")                        // 25    スキップ判定が生きてるかの確認
+    test.add("println(\"a'''\")")                       // 26    文字列としての'''はスキップしない
+    test.add("return true")                             // 27
+    test.add('if (match_num(line, /"""/) == 1) {')      // 28    文字列としての"""はスキップしない
+    test.add("    return true")                         // 29
+    test.add("// g_skip = null")                        // 30    スキップ判定が生きてるかの確認
+    test.add("if (match_num(line, /\"\"\"/) == 1) {")   // 31    \"\"\"はスキップしない
+    test.add("    return true")                         // 32
+    test.add("println(\"a \\\"\\\"\\\")")               // 33    \"\"\"はスキップしない
+    test.add("return true")                             // 34
 
-    List expected = [2, 4, 8, 9, 10, 11, 12, 17, 21]
+    List expected = [2, 4, 8, 9, 10, 11, 12, 17, 21, 25, 30]
     List skips = jenkinsfile.get_skip_line_nums(test)
 
     if (!common.are_equals(expected, skips, "", sb)) {
