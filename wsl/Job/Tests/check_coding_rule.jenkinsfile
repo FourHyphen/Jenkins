@@ -154,7 +154,6 @@ def get_skip_line_nums(List lines) {
     return skips
 }
 
-/* TODO: 判定が不完全な気がする、実戦投入後に再検討すること */
 def do_skip_start(String line, String skip_str, int line_num) {
     /* スキップ開始文字列が、PG 中で文字列として扱われているならスキップしない */
     /* 文字列の中に埋め込まれている場合 */
@@ -204,7 +203,6 @@ def debug_dump(String str) {
     }
 }
 
-/* TODO: 判定が不完全な気がする、実戦投入後に再検討すること */
 def do_skip_finish(String line, String skip_str, int line_num) {
     if (match_num(line, skip_str) == 1) {
         println("skip finish ${skip_str}: ${line} ${line_num}")
@@ -419,18 +417,21 @@ def is_ok_process(String line, int line_num) {
 
 def is_match_if_format(String line, int line_num) {
     boolean result = true
+    /* "if (true)" の、"()" の前後の半角スペースの有無確認 */
     if (!(line =~ /if \([^ ].*?[^ ]\)/)) {
         result_append("[ERROR] line ${line_num}: ${line}\n    if format -> if \\([^ ]")
         result = false
     }
 
     if (line =~ /\{ *$/) {
-        /* 1 行の中に { がある場合 */
+        /* if 行の中に { がある場合、") {" の半角スペース確認 */
         if (!(line =~ /\) \{$/)) {
             result_append("[ERROR] line ${line_num}: ${line}\n    if format -> ) {\$")
             result = false
         }
     } else {
+        /* if 行の中に { がない場合、"if (true == true) return true" を想定 */
+        /* ") return" のような半角スペースの確認 */
         if (!(line =~ /\) +[A-Za-z]/)) {
             result_append("[ERROR] line ${line_num}: ${line}\n    if format -> ) +[A-Za-z]")
             result = false
@@ -439,6 +440,7 @@ def is_match_if_format(String line, int line_num) {
 
     /* else if の場合 */
     if (line =~ /else +if/) {
+        /* else if 前後の半角スペースの確認 */
         if (!(line =~ /\} else if \(/)) {
             result_append("[ERROR] line ${line_num}: ${line}\n    if format -> } else if (")
             result = false
@@ -446,6 +448,7 @@ def is_match_if_format(String line, int line_num) {
     }
 
     if (line.contains("==") || line.contains("!=") || line.contains("||") || line.contains("&&")) {
+        /* 比較演算子のフォーマット確認 */
         if (!is_match_judge_format(line, line_num)) {
             result = false
         }
@@ -457,11 +460,13 @@ def is_match_if_format(String line, int line_num) {
 def is_match_judge_format(String line, int line_num) {
     boolean result = true
     if (!(line =~ / [!=]= /)) {
+        /* == か != の場合の半角スペースの確認 */
         result_append("[ERROR] line ${line_num}: ${line}\n    judge format -> \" =[!=] \"")
         result = false
     }
 
     if (line.contains("||") || line.contains("&&")) {
+        /* || か && の場合の半角スペースの確認 */
         if (!(line =~ / [|&][|&] /)) {
             result_append("[ERROR] line ${line_num}: ${line}\n    judge format -> \" [|&][|&] \"")
             result = false
@@ -469,6 +474,7 @@ def is_match_judge_format(String line, int line_num) {
     }
 
     if (line.contains("=~")) {
+        /* 正規表現の確認 */
         if (!is_match_regex_format(line, line_num)) {
             result = false
         }
