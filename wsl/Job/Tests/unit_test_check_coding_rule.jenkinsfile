@@ -277,7 +277,9 @@ def check_process_judge(def jenkinsfile, def common, StringBuilder sb) {
     List oks = ["    true == true",
                 "    (true != false)",
                 "    true == true && true == true",
-                "    (true == true) || (true == true)"
+                "    (true == true) || (true == true)",
+                "    (true || true)",
+                "    (true && true)"
                ]
     if (!check_ok_pattern(jenkinsfile.&is_match_judge_format, oks, common, sb)) {
         result = false
@@ -291,7 +293,11 @@ def check_process_judge(def jenkinsfile, def common, StringBuilder sb) {
                 "    false == false&& false == false",        // 半角スペース不足
                 "    (false == false) &&(false == false)",    // 半角スペース不足
                 "    (false == false)|| (false == false)",    // 半角スペース不足
-                "    false == false ||false == false"         // 半角スペース不足
+                "    false == false ||false == false",        // 半角スペース不足
+                "    false|| false",                          // 半角スペース不足
+                "    false ||false",                          // 半角スペース不足
+                "    false&& false",                          // 半角スペース不足
+                "    false &&false"                           // 半角スペース不足
                ]
     if (!check_ng_pattern(jenkinsfile.&is_match_judge_format, ngs, common, sb)) {
         result = false

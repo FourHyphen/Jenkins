@@ -459,10 +459,12 @@ def is_match_if_format(String line, int line_num) {
 
 def is_match_judge_format(String line, int line_num) {
     boolean result = true
-    if (!(line =~ / [!=]= /)) {
-        /* == か != の場合の半角スペースの確認 */
-        result_append("[ERROR] line ${line_num}: ${line}\n    judge format -> \" =[!=] \"")
-        result = false
+    if (line.contains("==") || line.contains("!=")) {
+        if (!(line =~ / [!=]= /)) {
+            /* == か != の場合の半角スペースの確認 */
+            result_append("[ERROR] line ${line_num}: ${line}\n    judge format -> \" =[!=] \"")
+            result = false
+        }
     }
 
     if (line.contains("||") || line.contains("&&")) {
