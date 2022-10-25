@@ -369,11 +369,13 @@ def check_process_var(def jenkinsfile, def common, StringBuilder sb) {
 
     // OK パターン
     List oks = ["    String value = \"tmp\"",
-                "    String value =    \"tmp\"",    // 縦を合わせる場合あり
-                "    String value =",               // 次の行にまたがる場合
-                "    value = null",                 // ローカル変数への代入
-                "    g_value = 1",                  // グローバル変数への代入
-                "    g_value ="                     // 次の行にまたがる場合
+                "    String value =    \"tmp\"",     // 縦を合わせる場合あり
+                "    String value =",                // 次の行にまたがる場合
+                "    value = null",                  // ローカル変数への代入
+                "    g_value = 1",                   // グローバル変数への代入
+                "    g_value =",                     // 次の行にまたがる場合
+                "    return \"cmd --arg=value\"",    // 文字列として扱う "=" であれば確認不要
+                "    return 'cmd --arg=value'"       // 文字列として扱う "=" であれば確認不要
                ]
     if (!check_ok_pattern(jenkinsfile.&is_match_var_format, oks, common, sb)) {
         result = false

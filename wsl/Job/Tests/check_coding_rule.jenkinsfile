@@ -502,11 +502,19 @@ def is_match_var_format(String line, int line_num) {
 
     /* 同じ行で代入を完結するならチェック */
     if (!(line =~ / = /)) {
-        result_append("[ERROR] line ${line_num}: ${line}\n    var format -> \" = \"")
-        return false
+        /* return "cmd --arg=value" のように文字列として扱う "=" の場合は確認不要 */
+        if (!is_pattern_equal_in_literal(line)) {
+            result_append("[ERROR] line ${line_num}: ${line}\n    var format -> \" = \"")
+            return false
+        }
     }
 
     return true
+}
+
+def is_pattern_equal_in_literal(String str) {
+    /* "=" がリテラルの中にあれば true を返す */
+    return (str =~ /"[^"=]*=[^"=]*"/) || (str =~ /'[^'=]*=[^'=]*'/)
 }
 
 def is_match_return_format(String line, int line_num) {
