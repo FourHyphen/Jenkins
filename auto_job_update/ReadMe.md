@@ -21,7 +21,7 @@ docker-compose -f dc_update_jenkins_job.yml up -d
 
 ## git clone
 - コンテナ内で作業
-- `/work/git` で ` git clone`
+  - パスはどこでも OK
   - 認証情報は自身で指定
 
 # 3. スクリプト実行

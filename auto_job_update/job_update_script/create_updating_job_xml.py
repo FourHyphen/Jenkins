@@ -9,8 +9,8 @@ from xml.sax.saxutils import *
 #     基となるジョブ設定 xml パス
 #     ジョブスクリプトパス
 #     出力 xml ファイルパス
-#   例:
-#     
+# ex:
+#   python3 create_updating_job_xml.py './build.xml' './build_new.jenkinsfile' './build_new.xml'
 ################################################################################
 
 ################################################################################
@@ -65,6 +65,7 @@ class AppArgs:
         self.__dump_error('  引数1: 基となるジョブ設定 xml パス')
         self.__dump_error('  引数2: ジョブスクリプトパス')
         self.__dump_error('  引数3: 出力 xml ファイルパス')
+        self.__dump_error(f"  ex) python3 {self.__args[0]} './build.xml' './build_new.jenkinsfile' './build_new.xml'")
 
     def __dump_error(self, str_: str) -> None:
         print(str_, file=sys.stderr)

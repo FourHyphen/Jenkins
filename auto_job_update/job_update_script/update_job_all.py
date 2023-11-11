@@ -6,18 +6,19 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 import update_job
+from common import AppEnv
 
 ################################################################################
 # usage:
 #   環境変数:
 #     JENKINS_CLI_USER_NAME: ユーザー名
 #     JENKINS_CLI_PASSWORD : パスワード
+#     jenkins-cli.jar に PATH が通っていること
 #   引数:
 #     ジョブスクリプトファイルが存在するディレクトリパス
 #     ジョブ更新に使用した xml ファイルを保存するディレクトリパス
 #   機能
-#     全ジョブ URL ルートに存在する全ジョブを指定ジョブスクリプトディレクトリに存在する
-#     ジョブスクリプトファイルで更新する
+#     全ジョブ URL ルートに存在する全ジョブを指定ジョブスクリプトディレクトリに存在するジョブスクリプトファイルで更新する
 #     ジョブ更新に使用した xml ファイルを指定ディレクトリパスにジョブ URL ルート毎に保存する
 # ex:
 #   export JENKINS_CLI_USER_NAME=admin
@@ -28,51 +29,21 @@ import update_job
 ################################################################################
 # グローバル定数: ユーザー設定項目
 ################################################################################
-G_JOB_DIR_URLS = ['http://localhost:8080/job/job_auto_update',
-                  'http://localhost:8080/job/job_auto_update2']
-G_JOB_NAMES = ['build', 'seed_task']
+# 末尾に "/" をつけないこと
+G_JOB_DIR_URLS = ['http://localhost:8080/job/duplicate_work/job/production_configuration_work']
+G_JOB_NAMES = ['create_task', 'create_seed_task', 'seed_task', 'build', 'log_execute']
 
 ################################################################################
 # グローバル定数: 固定
 ################################################################################
-G_JENKINS_CLI_ENV_USER_NAME = 'JENKINS_CLI_USER_NAME'
-G_JENKINS_CLI_ENV_PASSWORD = 'JENKINS_CLI_PASSWORD'
-
 G_OK = 0
-G_ENV_DO_NOT_DEFINE = 1
+G_ENV_ERROR = 1
 G_ARGUMENT_ERROR = 2
 G_DIR_DO_NOT_EXIST = 3
 
 ################################################################################
 # クラス定義
 ################################################################################
-class AppEnv:
-    @property
-    def user_name(self):
-        return self.__user_name
-
-    @property
-    def password(self):
-        return self.__password
-
-    def __init__(self):
-        self.__user_name = os.getenv(G_JENKINS_CLI_ENV_USER_NAME)
-        self.__password = os.getenv(G_JENKINS_CLI_ENV_PASSWORD)
-
-    def check(self) -> int:
-        if (self.user_name == None or self.password == None):
-            self.__dump_errors()
-            return G_ENV_DO_NOT_DEFINE
-        return G_OK
-
-    def __dump_errors(self) -> None:
-        self.__dump_error("error: 以下環境変数を定義してから実行")
-        self.__dump_error(f"  {G_JENKINS_CLI_ENV_USER_NAME}: jenkins-cli.jar 実行時のユーザー名")
-        self.__dump_error(f"  {G_JENKINS_CLI_ENV_PASSWORD} : jenkins-cli.jar 実行時のパスワード or トークン")
-
-    def __dump_error(self, str_: str) -> None:
-        print(str_, file=sys.stderr)
-
 class AppArgs:
     @property
     def job_script_dir_path(self):
@@ -118,7 +89,7 @@ def main(args:list) -> int:
     app_env = AppEnv()
     res = app_env.check()
     if res != 0:
-        return res
+        return G_ENV_ERROR
 
     # 引数設定
     app_args = AppArgs(args)
@@ -129,7 +100,7 @@ def main(args:list) -> int:
     # 全ベース URL の全ジョブを更新
     result = 0
     for job_dir_url in G_JOB_DIR_URLS:
-        print(f"# update: ${job_dir_url}")
+        print(f"# update: {job_dir_url}")
 
         # 更新に使用した xml 保存先ディレクトリを作成
         update_xml_dir_path = create_update_xml_dir_path(app_args.update_xml_dir_root_path, job_dir_url)
@@ -141,6 +112,7 @@ def main(args:list) -> int:
             if job_result != 0:
                 dump_error(f"update error: {job_dir_url}, job name: {job_name}")
                 result = job_result
+            print("")
 
         print("")
 
@@ -148,7 +120,9 @@ def main(args:list) -> int:
 
 def create_update_xml_dir_path(update_xml_dir_root_path: str, job_dir_url: str) -> str:
     '''更新に使用した xml を保存するディレクトリパスを作成する'''
+    # ジョブ URL 文字列をディレクトリ名とする(ディレクトリ名に使えない文字を "_" で置換)
     job_unique = re.sub (r'[:/\.]', "_", job_dir_url)
+
     return f'{update_xml_dir_root_path}/{job_unique}'
 
 def update_job_core(app_args: AppArgs, job_dir_url: str, job_name: str, update_xml_dir_path: str) -> int:

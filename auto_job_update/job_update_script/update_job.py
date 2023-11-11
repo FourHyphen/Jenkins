@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 import download_job_xml
 import create_updating_job_xml
 import update_job_by_updating_xml
-from common import JobUrl
+from common import AppEnv, JobUrl
 
 ################################################################################
 # usage:
@@ -30,10 +30,6 @@ from common import JobUrl
 ################################################################################
 # グローバル定数
 ################################################################################
-G_JENKINS_CLI_JAR_PATH = '/work/jenkins-cli.jar'
-G_JENKINS_CLI_ENV_USER_NAME = 'JENKINS_CLI_USER_NAME'
-G_JENKINS_CLI_ENV_PASSWORD = 'JENKINS_CLI_PASSWORD'
-
 G_OK = 0
 G_ENV_DO_NOT_DEFINE = 1
 G_ARGUMENT_ERROR = 2
@@ -41,33 +37,6 @@ G_ARGUMENT_ERROR = 2
 ################################################################################
 # クラス定義
 ################################################################################
-class AppEnv:
-    @property
-    def user_name(self):
-        return self.__user_name
-
-    @property
-    def password(self):
-        return self.__password
-
-    def __init__(self):
-        self.__user_name = os.getenv(G_JENKINS_CLI_ENV_USER_NAME)
-        self.__password = os.getenv(G_JENKINS_CLI_ENV_PASSWORD)
-
-    def check(self) -> int:
-        if (self.user_name == None or self.password == None):
-            self.__dump_errors()
-            return G_ENV_DO_NOT_DEFINE
-        return G_OK
-
-    def __dump_errors(self) -> None:
-        self.__dump_error("error: 以下環境変数を定義してから実行")
-        self.__dump_error(f"  {G_JENKINS_CLI_ENV_USER_NAME}: jenkins-cli.jar 実行時のユーザー名")
-        self.__dump_error(f"  {G_JENKINS_CLI_ENV_PASSWORD} : jenkins-cli.jar 実行時のパスワード or トークン")
-
-    def __dump_error(self, str_: str) -> None:
-        print(str_, file=sys.stderr)
-
 class AppArgs:
     @property
     def job_url(self):

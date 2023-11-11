@@ -4,7 +4,7 @@ import re
 import sys
 import subprocess
 import xml.etree.ElementTree as ET
-from common import JobUrl
+from common import AppEnv, JobUrl
 
 ################################################################################
 # usage:
@@ -23,12 +23,8 @@ from common import JobUrl
 ################################################################################
 # グローバル定数
 ################################################################################
-G_JENKINS_CLI_JAR_PATH = '/work/jenkins-cli.jar'
-G_JENKINS_CLI_ENV_USER_NAME = 'JENKINS_CLI_USER_NAME'
-G_JENKINS_CLI_ENV_PASSWORD = 'JENKINS_CLI_PASSWORD'
-
 G_OK = 0
-G_ENV_DO_NOT_DEFINE = 1
+G_ENV_ERROR = 1
 G_ARGUMENT_ERROR = 2
 G_XML_DO_NOT_EXIST = 3
 G_JOB_UPDATE_FAIL = 4
@@ -36,33 +32,6 @@ G_JOB_UPDATE_FAIL = 4
 ################################################################################
 # クラス定義
 ################################################################################
-class AppEnv:
-    @property
-    def user_name(self):
-        return self.__user_name
-
-    @property
-    def password(self):
-        return self.__password
-
-    def __init__(self):
-        self.__user_name = os.getenv(G_JENKINS_CLI_ENV_USER_NAME)
-        self.__password = os.getenv(G_JENKINS_CLI_ENV_PASSWORD)
-
-    def check(self) -> int:
-        if (self.user_name == None or self.password == None):
-            self.__dump_errors()
-            return G_ENV_DO_NOT_DEFINE
-        return G_OK
-
-    def __dump_errors(self) -> None:
-        self.__dump_error("error: 以下環境変数を定義してから実行")
-        self.__dump_error(f"  {G_JENKINS_CLI_ENV_USER_NAME}: jenkins-cli.jar 実行時のユーザー名")
-        self.__dump_error(f"  {G_JENKINS_CLI_ENV_PASSWORD} : jenkins-cli.jar 実行時のパスワード or トークン")
-
-    def __dump_error(self, str_: str) -> None:
-        print(str_, file=sys.stderr)
-
 class AppArgs:
     @property
     def job_url(self):
@@ -120,7 +89,7 @@ def main(args:list) -> int:
     app_env = AppEnv()
     res = app_env.check()
     if res != 0:
-        return res
+        return G_ENV_ERROR
 
     # 引数設定
     app_args = AppArgs(args)
@@ -149,8 +118,8 @@ def dump_error(str_: str) -> None:
     print(str_, file=sys.stderr)
 
 def create_command_update_job(app_env: AppEnv, job_url: JobUrl, xml_path: XmlPath) -> str:
-    print(f"java -jar {G_JENKINS_CLI_JAR_PATH} -s {job_url.master} -auth ****:**** update-job {job_url.relative_path} < {xml_path.path}")
-    return f"java -jar {G_JENKINS_CLI_JAR_PATH} -s {job_url.master} -auth {app_env.user_name}:{app_env.password} update-job {job_url.relative_path} < {xml_path.path}"
+    print(f"java -jar {app_env.jenkins_cli_jar_path} -s {job_url.master} -auth ****:**** update-job {job_url.relative_path} < {xml_path.path}")
+    return f"java -jar {app_env.jenkins_cli_jar_path} -s {job_url.master} -auth {app_env.user_name}:{app_env.password} update-job {job_url.relative_path} < {xml_path.path}"
 
 def execute_command(command: str) -> str:
     result = subprocess.run(command, shell=True)
