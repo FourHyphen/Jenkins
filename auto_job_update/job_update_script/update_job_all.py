@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import pathlib
@@ -133,12 +134,13 @@ def main(args:list) -> int:
         return G_JSON_ERROR
 
     # 全ベース URL の全ジョブを更新
+    date = get_now_date()
     result = 0
     for job_dir_url in app_json.job_dir_urls:
         print(f"# update: {job_dir_url}")
 
         # 更新に使用した xml 保存先ディレクトリを作成
-        update_xml_dir_path = create_update_xml_dir_path(app_json.update_xml_dir_root_path, job_dir_url)
+        update_xml_dir_path = create_update_xml_dir_path(app_json.update_xml_dir_root_path, date, job_dir_url)
         os.makedirs(update_xml_dir_path, exist_ok=True)
 
         # 当該ベース URL の全ジョブを更新
@@ -156,12 +158,15 @@ def main(args:list) -> int:
 def dump_error(str_: str) -> None:
     print(str_, file=sys.stderr)
 
-def create_update_xml_dir_path(update_xml_dir_root_path: str, job_dir_url: str) -> str:
+def get_now_date() -> str:
+    return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+def create_update_xml_dir_path(update_xml_dir_root_path: str, date: str, job_dir_url: str) -> str:
     '''更新に使用した xml を保存するディレクトリパスを作成する'''
     # ジョブ URL 文字列をディレクトリ名とする(ディレクトリ名に使えない文字を "_" で置換)
     job_unique = re.sub (r'[:/\.]', "_", job_dir_url)
 
-    return f'{update_xml_dir_root_path}/{job_unique}'
+    return f'{update_xml_dir_root_path}/{date}/{job_unique}'
 
 def update_job_core(job_script_dir_path: str, job_dir_url: str, job_name: str, update_xml_dir_path: str) -> int:
     '''
