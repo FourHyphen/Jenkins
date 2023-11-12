@@ -47,58 +47,11 @@ from common import AppEnv
 G_OK = 0
 G_ENV_ERROR = 1
 G_ARGUMENT_ERROR = 2
-G_JSON_ERROR = 3
 
 ################################################################################
 # クラス定義
 ################################################################################
-class AppArgs:
-    @property
-    def json_path(self):
-        return self.__json_path
-
-    def __init__(self, args):
-        self.__args = args
-        if len(self.__args) == 2:
-            self.__json_path = self.__args[1]
-
-    def check(self) -> int:
-        if len(self.__args) != 2:
-            self.__dump_errors()
-            return G_ARGUMENT_ERROR
-
-        # json が存在するかチェック
-        if not os.path.exists(self.json_path):
-            self.__dump_error(f"error: {self.json_path} は存在しません")
-            return G_ARGUMENT_ERROR
-
-        return G_OK
-
-    def __dump_errors(self) -> None:
-        self.__dump_error("error: 引数は以下指定")
-        self.__dump_error("  引数1: 各種設定を記載した json ファイルパス")
-        self.__dump_error(f"  ex) python3 {self.__args[0]} './input.json'")
-
-    def __dump_error(self, str_: str) -> None:
-        print(str_, file=sys.stderr)
-
-class AppJson:
-    @property
-    def job_dir_urls(self) -> list:
-        return self.__job_dir_urls
-
-    @property
-    def job_names(self) -> list:
-        return self.__job_names
-
-    @property
-    def job_script_dir_path(self) -> str:
-        return self.__job_script_dir_path
-
-    @property
-    def update_xml_dir_root_path(self) -> str:
-        return self.__update_xml_dir_root_path
-
+class UpdateJobAll:
     def __init__(self, json_path: str):
         self.__get_json_data(json_path)
 
@@ -111,53 +64,37 @@ class AppJson:
         self.__job_script_dir_path = json_contents['job_script_dir_path']
         self.__update_xml_dir_root_path = json_contents['update_xml_dir_root_path']
 
-################################################################################
-# main 処理
-################################################################################
-def main(args:list) -> int:
-    # 環境変数確認
-    res = AppEnv().check()
-    if res != 0:
-        return G_ENV_ERROR
+    def execute(self) -> int:
+        # 環境変数確認
+        res = AppEnv().check()
+        if res != 0:
+            return G_ENV_ERROR
 
-    # 引数設定
-    app_args = AppArgs(args)
-    res = app_args.check()
-    if res != 0:
-        return res
+        # 全ベース URL の全ジョブを更新
+        date = get_now_date()
+        result = 0
+        for job_dir_url in self.__job_dir_urls:
+            print(f"# update: {job_dir_url}")
 
-    # 引数指定の json 解析
-    try:
-        app_json = AppJson(app_args.json_path)
-    except Exception as e:
-        dump_error(e)
-        return G_JSON_ERROR
+            # 更新に使用した xml 保存先ディレクトリを作成
+            update_xml_dir_path = create_update_xml_dir_path(self.__update_xml_dir_root_path, date, job_dir_url)
+            os.makedirs(update_xml_dir_path, exist_ok=True)
 
-    # 全ベース URL の全ジョブを更新
-    date = get_now_date()
-    result = 0
-    for job_dir_url in app_json.job_dir_urls:
-        print(f"# update: {job_dir_url}")
+            # 当該ベース URL の全ジョブを更新
+            for job_name in self.__job_names:
+                job_result = update_job_core(self.__job_script_dir_path, job_dir_url, job_name, update_xml_dir_path)
+                if job_result != 0:
+                    common.dump_error(f"update error: {job_dir_url}, job name: {job_name}")
+                    result = job_result
+                print("")
 
-        # 更新に使用した xml 保存先ディレクトリを作成
-        update_xml_dir_path = create_update_xml_dir_path(app_json.update_xml_dir_root_path, date, job_dir_url)
-        os.makedirs(update_xml_dir_path, exist_ok=True)
-
-        # 当該ベース URL の全ジョブを更新
-        for job_name in app_json.job_names:
-            job_result = update_job_core(app_json.job_script_dir_path, job_dir_url, job_name, update_xml_dir_path)
-            if job_result != 0:
-                dump_error(f"update error: {job_dir_url}, job name: {job_name}")
-                result = job_result
             print("")
 
-        print("")
+        return result
 
-    return result
-
-def dump_error(str_: str) -> None:
-    print(str_, file=sys.stderr)
-
+################################################################################
+# 関数定義
+################################################################################
 def get_now_date() -> str:
     return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -180,8 +117,7 @@ def update_job_core(job_script_dir_path: str, job_dir_url: str, job_name: str, u
         print(f"Nothing job_name script(job_name = {job_name})")
         return 0
 
-    args = ["update_job.py", f'{job_dir_url}/{job_name}', job_script_path, update_xml_dir_path]
-    return update_job.main(args)
+    return update_job.execute(["update_job.py", f'{job_dir_url}/{job_name}', job_script_path, update_xml_dir_path])
 
 def get_job_script_path(job_script_dir_path: str, job_name: str) -> str:
     '''
@@ -201,7 +137,34 @@ def is_extension_job_script(file_path: str) -> bool:
     return ext in [".java", ".jenkinsfile", ".groovy"]
 
 ################################################################################
+# main 処理
+################################################################################
+def execute(args: list) -> int:
+    res = check_args(args)
+    if res != 0:
+        return res
+
+    return UpdateJobAll(args[1]).execute()
+
+def check_args(args) -> int:
+    if len(args) != 2:
+        dump_args_error(args[0])
+        return G_ARGUMENT_ERROR
+
+    # json が存在するかチェック
+    if not os.path.exists(args[1]):
+        common.dump_error(f"error: {args[1]} は存在しません")
+        return G_ARGUMENT_ERROR
+
+    return G_OK
+
+def dump_args_error(arg0) -> None:
+    common.dump_error("error: 引数は以下指定")
+    common.dump_error("  引数1: 各種設定を記載した json ファイルパス")
+    common.dump_error(f"  ex) python3 {arg0} './input.json'")
+
+################################################################################
 # スクリプトとして実行された場合のみ main 処理を実行
 ################################################################################
 if __name__ == '__main__':
-    exit(main(sys.argv))
+    exit(execute(sys.argv))

@@ -32,9 +32,9 @@ class TestMain(unittest.TestCase):
         args.append("sys.argv[0]")    # スクリプト名
         args.append("sys.argv[1]")
         args.append("sys.argv[2]")
-        app_args = create_updating_job_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = create_updating_job_xml.check_args(args)
+
         self.assertEqual(1, res)
 
     def test_args_error_when_xml_do_not_exist(self):
@@ -46,9 +46,9 @@ class TestMain(unittest.TestCase):
         args.append(os.path.join(G_TEST_DATA_ROOT, "not_exist.xml"))
         args.append(os.path.join(G_TEST_DATA_ROOT, "xml.xml"))    # 第一引数確認のため存在するファイルを指定
         args.append("sys.argv[3]")
-        app_args = create_updating_job_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = create_updating_job_xml.check_args(args)
+
         self.assertEqual(1, res)
 
     def test_args_error_when_job_script_do_not_exist(self):
@@ -62,9 +62,9 @@ class TestMain(unittest.TestCase):
         self.assertTrue(os.path.exists(base_xml_path))
         args.append(os.path.join(G_TEST_DATA_ROOT, "not_exist.jenkinsfile"))
         args.append("sys.argv[3]")
-        app_args = create_updating_job_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = create_updating_job_xml.check_args(args)
+
         self.assertEqual(1, res)
 
     def test_read_xml(self):

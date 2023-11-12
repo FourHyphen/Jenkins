@@ -32,9 +32,9 @@ class TestMain(unittest.TestCase):
         args.append("sys.argv[0]")    # スクリプト名
         args.append("sys.argv[1]")
         args.append("sys.argv[2]")
-        app_args = download_job_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = download_job_xml.check_args(args)
+
         self.assertEqual(2, res)
 
     def test_args_error_when_1st_arg_not_http(self):
@@ -45,9 +45,9 @@ class TestMain(unittest.TestCase):
         args.append("sys.argv[0]")    # スクリプト名
         args.append("not_http")
         args.append(G_TEST_DATA_ROOT)
-        app_args = download_job_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = download_job_xml.check_args(args)
+
         self.assertEqual(2, res)
 
     def test_args_error_when_directory_do_not_exist(self):
@@ -58,25 +58,10 @@ class TestMain(unittest.TestCase):
         args.append("sys.argv[0]")    # スクリプト名
         args.append("http://localhost:8080")
         args.append(os.path.join(G_TEST_DATA_ROOT, "not_exist_directory/save.xml"))
-        app_args = download_job_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = download_job_xml.check_args(args)
+
         self.assertEqual(3, res)
-
-    def test_success_create_out_xml_path(self):
-        '''
-        OutXmlPath クラスインスタンス化に成功する
-        '''
-        args = []
-        args.append("sys.argv[0]")    # スクリプト名
-        args.append("http://localhost:8080")
-        args.append(os.path.join(G_TEST_DATA_ROOT, "save.xml"))    # 存在するディレクトリへの出力設定にする
-        app_args = download_job_xml.AppArgs(args)
-
-        out_xml_path = download_job_xml.OutXmlPath(app_args)
-
-        # 絶対パスを生成するため、末尾のファイル名のみ確認する
-        self.assertEqual("save.xml", os.path.basename(out_xml_path.path))
 
     def test_is_file_xml(self):
         '''
@@ -86,15 +71,13 @@ class TestMain(unittest.TestCase):
         path = os.path.join(G_TEST_DATA_ROOT, "xml.xml")
         self.assertTrue(os.path.exists(path))
 
-        res = download_job_xml.is_file_xml(path)
-        self.assertTrue(res)
+        self.assertTrue(download_job_xml.is_file_xml(path))
 
         # xml 形式でないファイルの場合は False を返す
         path = os.path.join(G_TEST_DATA_ROOT, "not_xml.xml")
         self.assertTrue(os.path.exists(path))
 
-        res = download_job_xml.is_file_xml(path)
-        self.assertFalse(res)
+        self.assertFalse(download_job_xml.is_file_xml(path))
 
 if __name__ == '__main__':
     unittest.main()

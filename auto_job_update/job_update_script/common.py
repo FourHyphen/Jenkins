@@ -110,3 +110,13 @@ class JobUrl:
     def __remove_last_slash(self, str_: str) -> str:
         res = re.sub(r"(.*)/$", r"\1", str_)
         return res
+
+################################################################################
+# 関数定義
+################################################################################
+def dump_error(str_: str) -> None:
+    print(str_, file=sys.stderr)
+
+def execute_command(command: str) -> str:
+    result = subprocess.run(command, shell=True)
+    return result.returncode

@@ -32,9 +32,9 @@ class TestMain(unittest.TestCase):
         args.append("sys.argv[0]")    # スクリプト名
         args.append("sys.argv[1]")
         args.append("sys.argv[2]")
-        app_args = update_job_by_updating_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = update_job_by_updating_xml.check_args(args)
+
         self.assertEqual(2, res)
 
     def test_args_error_when_1st_arg_not_http(self):
@@ -45,9 +45,9 @@ class TestMain(unittest.TestCase):
         args.append("sys.argv[0]")    # スクリプト名
         args.append("not_http")
         args.append(os.path.join(G_TEST_DATA_ROOT, "xml.xml"))
-        app_args = update_job_by_updating_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = update_job_by_updating_xml.check_args(args)
+
         self.assertEqual(2, res)
 
     def test_args_error_when_directory_do_not_exist(self):
@@ -58,9 +58,9 @@ class TestMain(unittest.TestCase):
         args.append("sys.argv[0]")    # スクリプト名
         args.append("http://localhost:8080")
         args.append(os.path.join(G_TEST_DATA_ROOT, "not_exist_file.xml"))
-        app_args = update_job_by_updating_xml.AppArgs(args)
 
-        res = app_args.check()
+        res = update_job_by_updating_xml.check_args(args)
+
         self.assertEqual(3, res)
 
 if __name__ == '__main__':
