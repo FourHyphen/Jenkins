@@ -1,11 +1,10 @@
 import datetime
 import json
 import os
-import pathlib
 import re
 import sys
-import subprocess
-import xml.etree.ElementTree as ET
+
+from argparse import ArgumentParser
 
 import download_job_xml
 import create_updating_job_xml
@@ -54,8 +53,11 @@ G_ARGUMENT_ERROR = 2
 # クラス定義
 ################################################################################
 class UpdateJobAll:
-    def __init__(self, json_path: str):
+    def __init__(self, json_path: str, do_only_read: bool):
         self.__get_json_data(json_path)
+        self.__do_only_read = do_only_read
+        if self.__do_only_read:
+            print(f"only read and create xml(not update).\n")
 
     def __get_json_data(self, json_path: str) -> None:
         with open(json_path , 'r') as f:
@@ -128,11 +130,14 @@ class UpdateJobAll:
             common.dump_error(f"create_updating_job_xml return {res}")
             return res
 
-        # 更新用 ジョブ xml を Jenkins ジョブに登録
-        res = self.execute_update_job_by_updating_xml(job_url.full, updating_xml_path)
-        if res != 0:
-            common.dump_error(f"update_job_by_updating_xml return {res}")
-            return res
+        if self.__do_only_read:
+            print(f"read only, not update.")
+        else:
+            # 更新用 ジョブ xml を Jenkins ジョブに登録
+            res = self.execute_update_job_by_updating_xml(job_url.full, updating_xml_path)
+            if res != 0:
+                common.dump_error(f"update_job_by_updating_xml return {res}")
+                return res
 
         return G_OK
 
@@ -187,12 +192,20 @@ def is_extension_job_script(file_path: str) -> bool:
 ################################################################################
 # main 処理
 ################################################################################
-def execute(args: list) -> int:
+def get_option():
+    parser = ArgumentParser()
+    parser.add_argument('-r', '--readonly',
+                        action='store_true',    # 本オプションが与えられたら True
+                        help='If define, not update(read and create xml for update).')
+    parser.add_argument('pos', nargs='*')
+    return parser.parse_args()
+
+def execute(args: list, do_only_read: bool) -> int:
     res = check_args(args)
     if res != 0:
         return res
 
-    return UpdateJobAll(args[1]).execute()
+    return UpdateJobAll(args[1], do_only_read).execute()
 
 def check_args(args) -> int:
     if len(args) != 2:
@@ -215,4 +228,6 @@ def dump_args_error(arg0) -> None:
 # スクリプトとして実行された場合のみ main 処理を実行
 ################################################################################
 if __name__ == '__main__':
-    exit(execute(sys.argv))
+    args = get_option()
+    args.pos.insert(0, sys.argv[0])
+    exit(execute(args.pos, args.readonly))
