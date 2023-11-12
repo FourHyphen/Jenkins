@@ -7,8 +7,10 @@ import sys
 import subprocess
 import xml.etree.ElementTree as ET
 
-import update_job
-from common import AppEnv
+import download_job_xml
+import create_updating_job_xml
+import update_job_by_updating_xml
+import common
 
 ################################################################################
 # usage:
@@ -66,7 +68,7 @@ class UpdateJobAll:
 
     def execute(self) -> int:
         # 環境変数確認
-        res = AppEnv().check()
+        res = common.AppEnv().check()
         if res != 0:
             return G_ENV_ERROR
 
@@ -82,7 +84,7 @@ class UpdateJobAll:
 
             # 当該ベース URL の全ジョブを更新
             for job_name in self.__job_names:
-                job_result = update_job_core(self.__job_script_dir_path, job_dir_url, job_name, update_xml_dir_path)
+                job_result = self.update_job(self.__job_script_dir_path, job_dir_url, job_name, update_xml_dir_path)
                 if job_result != 0:
                     common.dump_error(f"update error: {job_dir_url}, job name: {job_name}")
                     result = job_result
@@ -91,6 +93,65 @@ class UpdateJobAll:
             print("")
 
         return result
+
+    def update_job(self, job_script_dir_path: str, job_dir_url: str, job_name: str, update_xml_dir_path: str) -> int:
+        '''
+        指定ジョブ URL の指定ジョブ名のジョブスクリプトを更新する
+        ジョブスクリプトはジョブ名に相当するファイルから取得する
+        出力として更新に使用した xml ファイルを残す
+        '''
+        # 更新に使用するジョブスクリプトファイルパスを特定
+        job_script_path = get_job_script_path(job_script_dir_path, job_name)
+        if job_script_path == "":
+            print(f"Nothing job_name script(job_name = {job_name})")
+            return 0
+
+        job_url = common.JobUrl(f'{job_dir_url}/{job_name}')
+
+        # 環境変数確認
+        app_env = common.AppEnv()
+        res = app_env.check()
+        if res != 0:
+            return res
+
+        # ジョブ xml をダウンロード
+        download_xml_path = self.create_download_xml_path(update_xml_dir_path, job_url.job_name)
+        res = self.execute_download_job_xml(job_url.full, download_xml_path)
+        if res != 0:
+            common.dump_error(f"download_job_xml return {res}")
+            return res
+
+        # 更新用 ジョブ xml を作成
+        updating_xml_path = self.create_updating_xml_path(download_xml_path, job_url.job_name)
+        res = self.execute_create_updating_job_xml(download_xml_path, job_script_path, updating_xml_path)
+        if res != 0:
+            common.dump_error(f"create_updating_job_xml return {res}")
+            return res
+
+        # 更新用 ジョブ xml を Jenkins ジョブに登録
+        res = self.execute_update_job_by_updating_xml(job_url.full, updating_xml_path)
+        if res != 0:
+            common.dump_error(f"update_job_by_updating_xml return {res}")
+            return res
+
+        return G_OK
+
+    def create_download_xml_path(self, save_dir_path: str, job_name: str) -> str:
+        return f"{save_dir_path}/{job_name}.xml"
+
+    def execute_download_job_xml(self, job_url: str, save_xml_path: str) -> int:
+        return download_job_xml.execute(["download_job_xml.py", job_url, save_xml_path])
+
+    def create_updating_xml_path(self, download_xml_path: str, job_name: str) -> str:
+        dir_path = os.path.dirname(download_xml_path)
+        return f"{dir_path}/{job_name}_new.xml"
+
+    def execute_create_updating_job_xml(self, download_xml_path: str, job_script_path: str, updating_xml_path: str) -> int:
+        return create_updating_job_xml.execute(["create_updating_job_xml.py", download_xml_path, job_script_path, updating_xml_path])
+
+    def execute_update_job_by_updating_xml(self, job_url: str, updating_xml_path: str) -> int:
+        return update_job_by_updating_xml.execute(["update_job_by_updating_xml.py", job_url, updating_xml_path])
+
 
 ################################################################################
 # 関数定義
@@ -104,20 +165,6 @@ def create_update_xml_dir_path(update_xml_dir_root_path: str, date: str, job_dir
     job_unique = re.sub (r'[:/\.]', "_", job_dir_url)
 
     return f'{update_xml_dir_root_path}/{date}/{job_unique}'
-
-def update_job_core(job_script_dir_path: str, job_dir_url: str, job_name: str, update_xml_dir_path: str) -> int:
-    '''
-    指定ジョブ URL の指定ジョブ名のジョブスクリプトを更新する
-    ジョブスクリプトはジョブ名に相当するファイルから取得する
-    出力として更新に使用した xml ファイルを残す
-    '''
-    # 更新に使用するジョブスクリプトファイルパスを特定
-    job_script_path = get_job_script_path(job_script_dir_path, job_name)
-    if job_script_path == "":
-        print(f"Nothing job_name script(job_name = {job_name})")
-        return 0
-
-    return update_job.execute(["update_job.py", f'{job_dir_url}/{job_name}', job_script_path, update_xml_dir_path])
 
 def get_job_script_path(job_script_dir_path: str, job_name: str) -> str:
     '''
@@ -135,6 +182,7 @@ def get_job_script_path(job_script_dir_path: str, job_name: str) -> str:
 def is_extension_job_script(file_path: str) -> bool:
     ext = os.path.splitext(file_path)[-1]
     return ext in [".java", ".jenkinsfile", ".groovy"]
+
 
 ################################################################################
 # main 処理
