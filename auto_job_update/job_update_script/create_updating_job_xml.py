@@ -130,15 +130,34 @@ def read_file_utf_without_bom(file_path: str) -> str:
         return f.read()
 
 def update_job_contents(base_xml_root, job_script_contents: str) -> None:
+    if is_job_pipeline(base_xml_root):
+        update_job_contents_pipeline(base_xml_root, job_script_contents)
+    else:
+        update_job_contents_freestyle(base_xml_root, job_script_contents)
+
+def is_job_pipeline(base_xml_root) -> bool:
+    return base_xml_root.find('definition') != None
+
+def update_job_contents_pipeline(base_xml_root, job_script_contents: str) -> None:
     # <?xml version='1.1' encoding='UTF-8'?>
     # <flow-definition plugin="workflow-job@1186.v8def1a_5f3944">
     #   ...
     #   <definition>
-    #     <script>ここがジョブスクリプト
-    #     </script>
+    #     <script>ここがジョブスクリプト</script>
     for i in base_xml_root.find('definition'):
         if i.tag == 'script':
             i.text = job_script_contents
+
+def update_job_contents_freestyle(base_xml_root, job_script_contents: str) -> None:
+    # <?xml version='1.1' encoding='UTF-8'?>
+    # <project>
+    #   <builders>
+    #     <hudson.tasks.Shell>
+    #       <command>ここがスクリプト</command>
+    for builders in base_xml_root.find('builders'):
+        for elem in builders:
+            if elem.tag == 'command':
+                elem.text = job_script_contents
 
 def save_xml(xml_root, out_xml_path: str) -> None:
     # write 時の xml エスケープで '" はそのまま残る、このまま jenkins-cli.jar に通して OK
