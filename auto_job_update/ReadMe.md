@@ -2,9 +2,9 @@
 - 環境構築
   - イメージビルド
   - コンテナ起動
-  - コンテナ内で git clone
+  - コンテナ内にジョブスクリプトファイルを配置
 - スクリプト実行
-  - 各種スクリプトを実行して Jenkins ジョブ更新
+  - Jenkins ジョブの現在の設定に、ジョブスクリプトファイルの中身を上書きする方法で Jenkins ジョブ更新
 
 # 2. 環境構築
 ## イメージビルド方法
@@ -19,76 +19,131 @@ cd <docker-compose yml 置いたディレクトリ>
 docker-compose -f dc_update_jenkins_job.yml up -d
 ```
 
-## git clone
-- コンテナ内で作業
-  - パスはどこでも OK
-  - 認証情報は自身で指定
+## 更新に使用するジョブスクリプトをコンテナに配置
+- パスはどこでも OK
 
-# 3. スクリプト実行
-## 構成
+# 3. in/out
+全てコンテナ内
+
+## in
+- 各種設定を記載した json ファイル
+  - ```
+    {
+        // このフォルダ以下のジョブが更新対象
+        "job_dir_urls": [
+            "http://localhost:8080/job/job_folder"
+        ],
+        // job_dir_urls の 1 URL 以下にあるこれらのジョブを更新する
+        "job_names": [
+            "job_name_a",
+            "job_name_b"
+        ],
+        // ジョブスクリプトファイルが存在するディレクトリパス
+        // ディレクトリがない場合エラー
+        "job_script_dir_path"     : "/work/git/job_script_dir_path",
+        // ジョブ更新に使用する xml ファイルを保存するディレクトリパス
+        // なければ処理中で生成する
+        "update_xml_dir_root_path": "/work/save_xml"
+    }
+    ```
+- 環境変数
+  - `JENKINS_CLI_USER_NAME`: Jenkins ユーザー名
+  - `JENKINS_CLI_PASSWORD`: Jenkins ユーザーのパスワード or トークン文字列
+  - `PATH`: `jenkins-cli.jar` にパスが通っていること
+    - PATH はコンテナ設定に含めているため基本編集不要
+- `-r` の有無
+  - `-r` をつけるとジョブ更新に使用する xml を生成するまでを行い、実際の更新は行わない
+    - 更新内容確認用を想定
+
+## out
+- `update_xml_dir_root_path` ディレクトリ
+  - `yyyyMMdd_HHmmss` ディレクトリ
+    - job_dir_urls の 1 要素(http文字列) ディレクトリ
+      - `ジョブ名.xml` -> スクリプト実行時の当該ジョブの設定内容
+      - `ジョブ名_new.xml` -> 更新内容
+    - job_dir_urls の 1 要素(http文字列) ディレクトリ
+      - ・・・
+- job_dir_urls の 1 要素(Jenkins ジョブ)
+  - `ジョブ名_new.xml` で更新
+  - `-r` を付けた場合は更新しない
+
+# 4. 実行方法
+全てコンテナ内
+
+## 環境変数設定
 ```
-update_job_all.py
-    for ジョブ URL in 更新したい全てのジョブ URL
-        for ジョブ in 更新したい全てのジョブ
-            update_job.py
-                ベース xml ダウンロード
-                 -> download_job_xml.py
-                ベース xml に今回更新するジョブスクリプトを上書きして更新用 xml 作成
-                 -> create_updating_job_xml.py
-                update_job_by_updating_xml.py
-                 -> 更新用 xml を使用してジョブを更新
+export JENKINS_CLI_USER_NAME=xxxxxxxx
+export JENKINS_CLI_USER_NAME=yyyyyyyy
 ```
 
-## 実行方法
-### 設定
-`update_job_all.py` の以下を設定
-```
-# この URL 以下全てのジョブが更新候補
-G_JOB_DIR_URLS = ['http://localhost:8080/job/job_auto_update',
-                  'http://localhost:8080/job/job_auto_update2']
-
-# 更新するジョブ名
-G_JOB_NAMES = ['build', 'seed_task']
-```
-
-以下環境変数を設定
-
-```
-JENKINS_CLI_USER_NAME: ユーザー名
-JENKINS_CLI_PASSWORD : パスワード
-```
-
-### 実行
-```
-update_job_all.py ＜ジョブスクリプトファイルが存在するディレクトリパス＞ ＜ジョブ更新に使用した xml ファイルを保存するディレクトリパス＞
-```
-
-例
+## 入力例
 ```
 script
  ┗ update_job_all.py
 job_scripts
  ┗ build.jenkinsfile
  ┗ seed_task.java
-save_job_xml
-
-コマンド
-python3 ./script/update_job_all.py ./job_scripts ./save_job_xml
+input.json
+ ┗  {
+        "job_dir_urls": [
+            "http://localhost:8080/job/job_folder1",
+            "http://localhost:8080/job/job_folder2"
+        ],
+        "job_names": [
+            "build",
+            "seed_task"
+        ],
+        "job_script_dir_path"     : "./job_scripts",
+        "update_xml_dir_root_path": "./save_xml"
+    }
 ```
 
-例の結果
+## コマンド
 ```
-script               -> 変化なし
+python3 ./script/update_job_all.py ./input.json
+
+# ジョブ更新内容を確認するだけの場合
+# python3 ./script/update_job_all.py -r ./input.json
+```
+
+## 例の結果
+```
+script                  -> 変化なし
  ┗ update_job_all.py
-job_scripts          -> 変化なし
+job_scripts             -> 変化なし
  ┗ build.jenkinsfile
  ┗ seed_task.java
-save_job_xml         -> もしこのディレクトリが存在しなかった場合、作成される
- ┗ build_new.xml     -> 作成される
- ┗ seed_task_new.xml -> 作成される
+input.json              -> 変化なし
+save_xml                -> ディレクトリが存在しなかったので作成される
+ ┗ yyyyMMdd_HHmmss      -> 作成される
+    ┗ http___localhost_8080_job_job_folder1
+      ┗ build.xml         -> 作成される(job_folder1/build の内容)
+      ┗ build_new.xml     -> 作成される(job_folder1/build に job_scripts/build.jenkinsfile を設定したもの)
+      ┗ seed_task.xml     -> 作成される
+      ┗ seed_task_new.xml -> 作成される
+    ┗ http___localhost_8080_job_job_folder2
+      ┗ build.xml         -> 作成される(job_folder2/build の内容)
+      ┗ build_new.xml     -> 作成される(job_folder2/build に job_scripts/build.jenkinsfile を設定したもの)
+      ┗ seed_task.xml     -> 作成される
+      ┗ seed_task_new.xml -> 作成される
 ```
 
-# 4. Licence
+# 4. スクリプト構成
+```
+update_job_all.py
+    for ジョブ URL in 更新したい全てのジョブ URL
+        for ジョブ in 更新したい全てのジョブ
+            ベース xml ダウンロード
+                -> download_job_xml.py
+            ベース xml に今回更新するジョブスクリプトを上書きして更新用 xml 作成
+                -> create_updating_job_xml.py
+
+            if not "-r"
+                update_job_by_updating_xml.py
+                    -> 更新用 xml を使用してジョブを更新
+```
+
+# 5. Licence
 - [MIT](https://github.com/tcnksm/tool/blob/master/LICENCE)
 
 # 参考: jenkins-cli.jar 使い方
