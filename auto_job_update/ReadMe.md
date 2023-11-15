@@ -115,17 +115,17 @@ job_scripts             -> 変化なし
  ┗ seed_task.java
 input.json              -> 変化なし
 save_xml                -> ディレクトリが存在しなかったので作成される
- ┗ yyyyMMdd_HHmmss      -> 作成される
+ ┗ yyyyMMdd_HHmmss      -> 以下新規作成
     ┗ http___localhost_8080_job_job_folder1
-      ┗ build.xml         -> 作成される(job_folder1/build の内容)
-      ┗ build_new.xml     -> 作成される(job_folder1/build に job_scripts/build.jenkinsfile を設定したもの)
-      ┗ seed_task.xml     -> 作成される
-      ┗ seed_task_new.xml -> 作成される
+      ┗ build.xml         -> job_folder1/build の内容
+      ┗ build_new.xml     -> job_folder1/build に job_scripts/build.jenkinsfile を設定したもの
+      ┗ seed_task.xml     -> 同 build
+      ┗ seed_task_new.xml -> 同 build_new
     ┗ http___localhost_8080_job_job_folder2
-      ┗ build.xml         -> 作成される(job_folder2/build の内容)
-      ┗ build_new.xml     -> 作成される(job_folder2/build に job_scripts/build.jenkinsfile を設定したもの)
-      ┗ seed_task.xml     -> 作成される
-      ┗ seed_task_new.xml -> 作成される
+      ┗ build.xml         -> job_folder2/build の内容
+      ┗ build_new.xml     -> job_folder2/build に job_scripts/build.jenkinsfile を設定したもの
+      ┗ seed_task.xml     -> 同 build
+      ┗ seed_task_new.xml -> 同 build_new
 ```
 
 # 4. スクリプト構成
