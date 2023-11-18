@@ -7,6 +7,7 @@ import sys
 from argparse import ArgumentParser
 from enum import Enum
 
+import copy_job
 import download_job_xml
 import create_updating_job_xml
 import update_job_by_updating_xml
@@ -59,6 +60,24 @@ class ExecuteMode(Enum):
     Copy = 3
     All = 4
     Unknown = 5
+
+class JsonInfo:
+    def __init__(self, json_path: str, execute_mode: ExecuteMode):
+        self.__get_json_data(json_path)
+        self.__execute_mode = execute_mode
+
+    def __get_json_data(self, json_path: str) -> None:
+        with open(json_path , 'r') as f:
+            json_contents = json.load(f)
+
+        self.job_update_urls          = self.__get_value_or_none(json_contents, 'job_update_urls')
+        self.copy_urls                = self.__get_value_or_none(json_contents, 'copy_urls')
+        self.job_names                = self.__get_value_or_none(json_contents, 'job_names')
+        self.job_script_dir_path      = self.__get_value_or_none(json_contents, 'job_script_dir_path')
+        self.update_xml_dir_root_path = self.__get_value_or_none(json_contents, 'update_xml_dir_root_path')
+
+    def __get_value_or_none(self, dict, key: str):
+        return dict[key] if key in dict else None
 
 class JobInfo:
     def __init__(self,
@@ -138,7 +157,7 @@ class JobInfo:
         '''
         # 更新に使用するジョブスクリプトファイルがなければスキップ
         if self.job_script_path == "":
-            return 0
+            return G_OK
 
         # ジョブ xml のダウンロードと更新用ジョブ xml 作成
         res = self.download_and_create_updating_xml()
@@ -156,25 +175,13 @@ class JobInfo:
     def __execute_update_job_by_updating_xml(self, job_url: str, updating_xml_path: str) -> int:
         return update_job_by_updating_xml.execute(["update_job_by_updating_xml.py", job_url, updating_xml_path])
 
-    def copy(self) -> int:
-        pass
-
     def all(self) -> int:
         pass
 
 class EditJob:
     def __init__(self, json_path: str, execute_mode: ExecuteMode):
-        self.__get_json_data(json_path)
+        self.__json_info = JsonInfo(json_path, execute_mode)
         self.__execute_mode = execute_mode
-
-    def __get_json_data(self, json_path: str) -> None:
-        with open(json_path , 'r') as f:
-            json_contents = json.load(f)
-
-        self.__job_dir_urls = json_contents['job_dir_urls']
-        self.__job_names = json_contents['job_names']
-        self.__job_script_dir_path = json_contents['job_script_dir_path']
-        self.__update_xml_dir_root_path = json_contents['update_xml_dir_root_path']
 
     def execute(self) -> int:
         # 環境変数確認
@@ -182,21 +189,47 @@ class EditJob:
         if res != 0:
             return G_ENV_ERROR
 
+        if self.__execute_mode == ExecuteMode.Copy:
+            return self.__copy()
+        elif self.__execute_mode == ExecuteMode.Update or \
+             self.__execute_mode == ExecuteMode.ReadOnly:
+            return self.__update()
+        elif self.__execute_mode == ExecuteMode.All:
+            return self.__all()
+        else:
+            raise("Execute mode is unknown.")
+
+    def __copy(self) -> int:
+        result = 0
+
+        for elem in self.__json_info.copy_urls:
+            src, dst = elem['src'], elem['dst']
+            print(f"# copy: {src} to {dst}")
+            url_result = self.__execute_copy_job(src, dst)
+            if url_result != 0:
+                result = url_result
+
+        return result
+
+    def __execute_copy_job(self, src_job_url: str, dst_job_url: str) -> int:
+        return copy_job.execute(["copy_job.py", src_job_url, dst_job_url])
+
+    def __update(self) -> int:
         # 全ベース URL の全ジョブを更新
         date = get_now_date()
         result = 0
-        for job_dir_url in self.__job_dir_urls:
+        for job_dir_url in self.__json_info.job_update_urls:
             print(f"# update: {job_dir_url}")
 
             # 更新に使用する xml 保存先ディレクトリを作成
-            save_updating_xml_dir_path = create_save_updating_xml_dir_path(self.__update_xml_dir_root_path, date, job_dir_url)
+            save_updating_xml_dir_path = create_save_updating_xml_dir_path(self.__json_info.update_xml_dir_root_path, date, job_dir_url)
             os.makedirs(save_updating_xml_dir_path, exist_ok=True)
 
             # 当該ベース URL の全ジョブを更新
-            for job_name in self.__job_names:
+            for job_name in self.__json_info.job_names:
                 job_info = JobInfo(job_dir_url=job_dir_url,
                                    job_name=job_name,
-                                   job_script_dir_path=self.__job_script_dir_path,
+                                   job_script_dir_path=self.__json_info.job_script_dir_path,
                                    save_updating_xml_dir_path=save_updating_xml_dir_path)
 
                 job_result = 1
