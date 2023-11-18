@@ -62,9 +62,8 @@ class ExecuteMode(Enum):
     Unknown = 5
 
 class JsonInfo:
-    def __init__(self, json_path: str, execute_mode: ExecuteMode):
+    def __init__(self, json_path: str):
         self.__get_json_data(json_path)
-        self.__execute_mode = execute_mode
 
     def __get_json_data(self, json_path: str) -> None:
         with open(json_path , 'r') as f:
@@ -79,28 +78,11 @@ class JsonInfo:
     def __get_value_or_none(self, dict, key: str):
         return dict[key] if key in dict else None
 
-class EditJob:
-    def __init__(self, json_path: str, execute_mode: ExecuteMode):
-        self.__json_info = JsonInfo(json_path, execute_mode)
-        self.__execute_mode = execute_mode
+class ProcessCopy:
+    def __init__(self, json_info: JsonInfo):
+        self.__json_info = json_info
 
     def execute(self) -> int:
-        # 環境変数確認
-        res = common.AppEnv().check()
-        if res != 0:
-            return G_ENV_ERROR
-
-        if self.__execute_mode == ExecuteMode.Copy:
-            return self.__copy()
-        elif self.__execute_mode == ExecuteMode.Update or \
-             self.__execute_mode == ExecuteMode.ReadOnly:
-            return self.__update()
-        elif self.__execute_mode == ExecuteMode.All:
-            return self.__all()
-        else:
-            raise("Execute mode is unknown.")
-
-    def __copy(self) -> int:
         result = 0
 
         for elem in self.__json_info.copy_urls:
@@ -114,6 +96,27 @@ class EditJob:
 
     def __execute_copy_job(self, src_job_url: str, dst_job_url: str) -> int:
         return copy_job.execute(["copy_job.py", src_job_url, dst_job_url])
+
+class EditJob:
+    def __init__(self, json_path: str, execute_mode: ExecuteMode):
+        self.__json_info = JsonInfo(json_path)
+        self.__execute_mode = execute_mode
+
+    def execute(self) -> int:
+        # 環境変数確認
+        res = common.AppEnv().check()
+        if res != 0:
+            return G_ENV_ERROR
+
+        if self.__execute_mode == ExecuteMode.Copy:
+            return ProcessCopy(self.__json_info).execute()
+        elif self.__execute_mode == ExecuteMode.Update or \
+             self.__execute_mode == ExecuteMode.ReadOnly:
+            return self.__update()
+        elif self.__execute_mode == ExecuteMode.All:
+            return self.__all()
+        else:
+            raise("Execute mode is unknown.")
 
     def __update(self) -> int:
         # 全ベース URL の全ジョブを更新
