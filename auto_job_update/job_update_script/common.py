@@ -77,39 +77,41 @@ class JobUrl:
         return self.__job_name
 
     def __init__(self, job_url):
-        self.__full = job_url
-        self.__master = self.__get_master_url()
-        self.__relative_path = self.__get_job_relative_path()
-        self.__job_name = self.__get_job_name()
+        self.__full = self.__remove_last_slash(job_url)
+        self.__master = self.__get_master_url(self.__full)
+        self.__relative_path = self.__get_job_relative_path(self.__full)
+        self.__job_name = self.__get_job_name(self.__full)
 
-    def __get_master_url(self) -> str:
+    def __remove_last_slash(self, str_: str) -> str:
+        '''末尾が "/" ならそれを削除'''
+        res = re.sub(r"(.*)/$", r"\1", str_)
+        return res
+
+    def __get_master_url(self, full: str) -> str:
         '''
-        in : http://localhost:8080/job/job_auto_update/job/build/
+        in : http://localhost:8080/job/job_auto_update/job/build
         out: http://localhost:8080/
         '''
-        return re.sub(r"(https?://[^/]+/).*", r"\1", self.full)
+        return re.sub(r"(https?://[^/]+/).*", r"\1", full)
 
-    def __get_job_relative_path(self) -> str:
+    def __get_job_relative_path(self, full: str) -> str:
         '''
-        in : http://localhost:8080/job/job_auto_update/job/build/
+        in : http://localhost:8080/job/job_auto_update/job/build
         out: job_auto_update/build
         '''
         # マスター部分(https?://localhost:8080/)以降の文字列取得
-        tmp = re.sub(r"https?://[^/]+/(.*)", r"\1", self.full)
+        tmp = re.sub(r"https?://[^/]+/(.*)", r"\1", full)
 
         # "job/" を全て削除
         return tmp.replace("job/", "")
 
-    def __get_job_name(self) -> str:
-        # 最後が "/" ならそれを削除
-        tmp = self.__remove_last_slash(self.full)
-
+    def __get_job_name(self, full: str) -> str:
+        '''
+        in : http://localhost:8080/job/job_auto_update/job/build
+        out: build
+        '''
         # 末尾がジョブ名
-        return re.sub(r".*/([^/]+)", r"\1", tmp)
-
-    def __remove_last_slash(self, str_: str) -> str:
-        res = re.sub(r"(.*)/$", r"\1", str_)
-        return res
+        return re.sub(r".*/([^/]+)", r"\1", full)
 
 ################################################################################
 # 関数定義

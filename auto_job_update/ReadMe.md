@@ -170,3 +170,9 @@ ed_task" < seed_task.xml
 $ java -jar jenkins-cli.jar -s http://localhost:8080/ -auth <user>:<password> update-job "job_auto_update/seed_task" < seed_task_new.xml
 ```
 
+## ジョブ(フォルダ)コピー
+```
+# dst の URL 末尾が "/" だと NG
+$ java -jar jenkins-cli.jar -s http://localhost:8080/ -auth <user>:<password> copy-job "job_auto_update/seed_task" "job_auto_update/seed_task2"
+```
+
