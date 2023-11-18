@@ -5,6 +5,7 @@ import re
 import sys
 
 from argparse import ArgumentParser
+from enum import Enum
 
 import download_job_xml
 import create_updating_job_xml
@@ -20,12 +21,11 @@ import common
 #   引数:
 #     ジョブ設定を記載した json ファイルパス
 #   機能
-#     全ジョブ URL ルートに存在する全ジョブを指定ジョブスクリプトディレクトリに存在するジョブスクリプトファイルで更新する
-#     ジョブ更新に使用する xml ファイルを指定ディレクトリパスにジョブ URL ルート毎に保存する
+#     json の通りにジョブをコピー／更新する
 # ex:
 #   export JENKINS_CLI_USER_NAME=admin
 #   export JENKINS_CLI_PASSWORD=password
-#   python3 update_job_all.py "./input.json"
+#   python3 edit_job.py "./input.json"
 # json 例:
 # {
 #     "job_dir_urls": [
@@ -46,12 +46,20 @@ import common
 # グローバル定数: 固定
 ################################################################################
 G_OK = 0
-G_ENV_ERROR = 1
-G_ARGUMENT_ERROR = 2
+G_ENV_ERROR = 11
+G_ARGUMENT_ERROR = 12
+G_OPTIONS_ERROR = 13
 
 ################################################################################
 # クラス定義
 ################################################################################
+class ExecuteMode(Enum):
+    ReadOnly = 1
+    Update = 2
+    Copy = 3
+    All = 4
+    Unknown = 5
+
 class JobInfo:
     def __init__(self,
                  job_dir_url: str,
@@ -104,18 +112,24 @@ class JobInfo:
             return 0
 
         # ジョブ xml をダウンロード
-        res = self.execute_download_job_xml(self.job_url.full, self.download_xml_path)
+        res = self.__execute_download_job_xml(self.job_url.full, self.download_xml_path)
         if res != 0:
             common.dump_error(f"download_job_xml return {res}")
             return res
 
         # 更新用 ジョブ xml を作成
-        res = self.execute_create_updating_job_xml(self.download_xml_path, self.job_script_path, self.updating_xml_path)
+        res = self.__execute_create_updating_job_xml(self.download_xml_path, self.job_script_path, self.updating_xml_path)
         if res != 0:
             common.dump_error(f"create_updating_job_xml return {res}")
             return res
 
         return G_OK
+
+    def __execute_download_job_xml(self, job_url: str, save_xml_path: str) -> int:
+        return download_job_xml.execute(["download_job_xml.py", job_url, save_xml_path])
+
+    def __execute_create_updating_job_xml(self, download_xml_path: str, job_script_path: str, updating_xml_path: str) -> int:
+        return create_updating_job_xml.execute(["create_updating_job_xml.py", download_xml_path, job_script_path, updating_xml_path])
 
     def update(self) -> int:
         '''
@@ -132,28 +146,26 @@ class JobInfo:
             return res
 
         # 更新用 ジョブ xml を Jenkins ジョブに登録
-        res = self.execute_update_job_by_updating_xml(self.job_url.full, self.updating_xml_path)
+        res = self.__execute_update_job_by_updating_xml(self.job_url.full, self.updating_xml_path)
         if res != 0:
             common.dump_error(f"update_job_by_updating_xml return {res}")
             return res
 
         return G_OK
 
-    def execute_download_job_xml(self, job_url: str, save_xml_path: str) -> int:
-        return download_job_xml.execute(["download_job_xml.py", job_url, save_xml_path])
-
-    def execute_create_updating_job_xml(self, download_xml_path: str, job_script_path: str, updating_xml_path: str) -> int:
-        return create_updating_job_xml.execute(["create_updating_job_xml.py", download_xml_path, job_script_path, updating_xml_path])
-
-    def execute_update_job_by_updating_xml(self, job_url: str, updating_xml_path: str) -> int:
+    def __execute_update_job_by_updating_xml(self, job_url: str, updating_xml_path: str) -> int:
         return update_job_by_updating_xml.execute(["update_job_by_updating_xml.py", job_url, updating_xml_path])
 
-class UpdateJobAll:
-    def __init__(self, json_path: str, do_only_read: bool):
+    def copy(self) -> int:
+        pass
+
+    def all(self) -> int:
+        pass
+
+class EditJob:
+    def __init__(self, json_path: str, execute_mode: ExecuteMode):
         self.__get_json_data(json_path)
-        self.__do_only_read = do_only_read
-        if self.__do_only_read:
-            print(f"only read and create xml(not update).\n")
+        self.__execute_mode = execute_mode
 
     def __get_json_data(self, json_path: str) -> None:
         with open(json_path , 'r') as f:
@@ -188,13 +200,14 @@ class UpdateJobAll:
                                    save_updating_xml_dir_path=save_updating_xml_dir_path)
 
                 job_result = 1
-                if self.__do_only_read:
+                if self.__execute_mode == ExecuteMode.ReadOnly:
+                    print(f"only read and create xml(not update).\n")
                     job_result = job_info.download_and_create_updating_xml()
-                else:
+                elif self.__execute_mode == ExecuteMode.Update:
                     job_result = job_info.update()
 
                 if job_result != 0:
-                    common.dump_error(f"update error: {job_dir_url}, job name: {job_name}")
+                    common.dump_error(f"error: {job_dir_url}, job name: {job_name}")
                     result = job_result
                 print("")
 
@@ -216,22 +229,40 @@ def create_save_updating_xml_dir_path(update_xml_dir_root_path: str, date: str, 
     return f'{update_xml_dir_root_path}/{date}/{job_unique}'
 
 ################################################################################
-# main 処理
+# 引数＆オプション 処理
 ################################################################################
 def get_option():
     parser = ArgumentParser()
     parser.add_argument('-r', '--readonly',
                         action='store_true',    # 本オプションが与えられたら True
                         help='If define, not update(read and create xml for update).')
+    parser.add_argument('-u', '--update',
+                        action='store_true',
+                        help='If define, update(read and create xml for update and update by xml).')
+    parser.add_argument('-c', '--copy',
+                        action='store_true',
+                        help='If define, copy(copy folder src to dst).')
+    parser.add_argument('-a', '--all',
+                        action='store_true',
+                        help='If define, all(copy folder and read and update(dst)).')
     parser.add_argument('pos', nargs='*')
     return parser.parse_args()
 
-def execute(args: list, do_only_read: bool) -> int:
-    res = check_args(args)
-    if res != 0:
-        return res
+def get_execute_mode(options) -> ExecuteMode:
+    true_options = [option for option in [options.readonly, options.update, options.copy, options.all] if option]
+    if len(true_options) != 1:
+        return ExecuteMode.Unknown
 
-    return UpdateJobAll(args[1], do_only_read).execute()
+    if options.readonly:
+        return ExecuteMode.ReadOnly
+    elif options.update:
+        return ExecuteMode.Update
+    elif options.copy:
+        return ExecuteMode.Copy
+    elif options.all:
+        return ExecuteMode.All
+    else:
+        return ExecuteMode.Unknown
 
 def check_args(args) -> int:
     if len(args) != 2:
@@ -255,5 +286,17 @@ def dump_args_error(arg0) -> None:
 ################################################################################
 if __name__ == '__main__':
     args = get_option()
+
+    # オプション確認
+    execute_mode = get_execute_mode(args)
+    if execute_mode == ExecuteMode.Unknown:
+        print("Please define -r or -u or -c or -a (only one).")
+        exit(G_OPTIONS_ERROR)
+
+    # 引数確認
     args.pos.insert(0, sys.argv[0])
-    exit(execute(args.pos, args.readonly))
+    if check_args(args.pos) != 0:
+        exit(G_ARGUMENT_ERROR)
+
+    # 実行
+    exit(EditJob(args.pos[1], execute_mode).execute())
