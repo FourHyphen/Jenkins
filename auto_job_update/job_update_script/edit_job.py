@@ -14,39 +14,7 @@ import update_job_by_updating_xml
 import common
 
 ################################################################################
-# usage:
-#   環境変数:
-#     JENKINS_CLI_USER_NAME: ユーザー名
-#     JENKINS_CLI_PASSWORD : パスワード
-#     jenkins-cli.jar に PATH が通っていること
-#   引数:
-#     ジョブ設定を記載した json ファイルパス
-#   機能
-#     json の通りにジョブをコピーしたり更新したりする
-# ex:
-#   export JENKINS_CLI_USER_NAME=admin
-#   export JENKINS_CLI_PASSWORD=password
-#   python3 edit_job.py <-dc or -c or -u or -a> "./input.json"
-# json 例:
-# {
-#     "job_update_urls": [
-#         "http://localhost:8080/job/user_work"
-#     ],
-#     "copy_urls": [
-#         {
-#             "src": "http://localhost:8080/job/user_work",
-#             "dst": "http://localhost:8080/job/user_work2"
-#         }
-#     ],
-#     "job_names": [
-#         "job_name_a",
-#         "job_name_b"
-#     ],
-#     // ジョブスクリプトファイルが存在するディレクトリパス
-#     "job_script_dir_path"     : "./script",
-#     // ジョブ更新に使用する xml ファイルを保存するディレクトリパス
-#     "update_xml_dir_root_path": "./save_xml"
-# }
+# usage: ReadMe 参照
 ################################################################################
 
 ################################################################################
