@@ -88,14 +88,11 @@ class ProcessCopy:
         for elem in self.__json_info.copy_urls:
             src, dst = elem['src'], elem['dst']
             print(f"# copy: {src} to {dst}")
-            url_result = self.__execute_copy_job(src, dst)
+            url_result = execute_copy_job(src, dst)
             if url_result != 0:
                 result = url_result
 
         return result
-
-    def __execute_copy_job(self, src_job_url: str, dst_job_url: str) -> int:
-        return copy_job.execute(["copy_job.py", src_job_url, dst_job_url])
 
 class ProcessDownloadAndCreateXml:
     def __init__(self, json_info: JsonInfo):
@@ -164,6 +161,42 @@ class ProcessUpdate:
 
         return result
 
+class ProcessAll:
+    def __init__(self, json_info: JsonInfo):
+        self.__json_info = json_info
+
+    def execute(self) -> int:
+        # 全 src URL を dst URL にコピー後、dst 内の全ジョブを更新
+        date = get_now_date()
+        result = 0
+
+        for elem in self.__json_info.copy_urls:
+            src, dst = elem['src'], elem['dst']
+            print(f"# copy: {src} to {dst}")
+            url_result = execute_copy_job(src, dst)
+            if url_result != 0:
+                result = url_result
+                continue
+
+            print(f"# update: {dst}")
+
+            # 更新に使用する xml 保存先ディレクトリを作成
+            save_updating_xml_dir_path = create_save_updating_xml_dir_path(self.__json_info.update_xml_dir_root_path, date, dst)
+            os.makedirs(save_updating_xml_dir_path, exist_ok=True)
+
+            # 当該 dst URL の全ジョブを更新
+            for job_name in self.__json_info.job_names:
+                job_result = update_job(dst, self.__json_info.job_script_dir_path, job_name, save_updating_xml_dir_path)
+
+                if job_result != 0:
+                    common.dump_error(f"error: {dst}, job name: {job_name}")
+                    result = job_result
+                print("")
+
+            print("")
+
+        return result
+
 class EditJob:
     def __init__(self, json_path: str, execute_mode: ExecuteMode):
         self.__json_info = JsonInfo(json_path)
@@ -175,21 +208,34 @@ class EditJob:
         if res != 0:
             return G_ENV_ERROR
 
+        # モードに見合ったクラス名取得
+        process = self.__get_process_class(self.__execute_mode)
+
+        # 実行
+        return process(self.__json_info).execute()
+
+    def __get_process_class(self, execute_mode: ExecuteMode):
+        '''
+        in : 実行モード
+        out: クラス(JsonInfo を引数とするイニシャライザを持ち、execute() メソッドを持つこと)
+        '''
         if self.__execute_mode == ExecuteMode.Copy:
-            return ProcessCopy(self.__json_info).execute()
+            return ProcessCopy
         elif self.__execute_mode == ExecuteMode.Update:
-            return ProcessUpdate(self.__json_info).execute()
+            return ProcessUpdate
         elif self.__execute_mode == ExecuteMode.DownloadAndCreateXml:
-            return ProcessDownloadAndCreateXml(self.__json_info).execute()
+            return ProcessDownloadAndCreateXml
         elif self.__execute_mode == ExecuteMode.All:
-            return self.__all()
+            return ProcessAll
         else:
             raise("Execute mode is unknown.")
-
 
 ################################################################################
 # 関数定義
 ################################################################################
+def execute_copy_job(src_job_url: str, dst_job_url: str) -> int:
+    return copy_job.execute(["copy_job.py", src_job_url, dst_job_url])
+
 def get_now_date() -> str:
     return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
