@@ -153,7 +153,7 @@ class ProcessUpdate:
 
             # 当該ベース URL の全ジョブを更新
             for job_name in self.__json_info.job_names:
-                job_result = self.__update_job(job_dir_url, self.__json_info.job_script_dir_path, job_name, save_updating_xml_dir_path)
+                job_result = update_job(job_dir_url, self.__json_info.job_script_dir_path, job_name, save_updating_xml_dir_path)
 
                 if job_result != 0:
                     common.dump_error(f"error: {job_dir_url}, job name: {job_name}")
@@ -163,42 +163,6 @@ class ProcessUpdate:
             print("")
 
         return result
-
-    def __update_job(self, job_dir_url, job_script_dir_path, job_name, save_updating_xml_dir_path) -> int:
-        '''
-        指定ジョブ URL の指定ジョブ名のジョブスクリプトを更新する
-        出力として更新に使用する xml ファイルを残す
-        '''
-        job_url = common.JobUrl(f'{job_dir_url}/{job_name}')
-
-        # 更新に使用するジョブスクリプトファイルパス
-        job_script_path = get_job_script_path(job_script_dir_path, job_name)
-
-        # 更新するジョブの現在の設定 xml 保存先パス
-        download_xml_path = create_download_xml_path(save_updating_xml_dir_path, job_name)
-
-        # 更新に使用する xml パス
-        updating_xml_path = create_updating_xml_path(download_xml_path, job_name)
-
-        # 更新に使用するジョブスクリプトファイルがなければスキップ
-        if job_script_path == "":
-            return G_OK
-
-        # ジョブ xml のダウンロードと更新用ジョブ xml 作成
-        res = download_and_create_updating_xml(job_url, job_script_path, download_xml_path, updating_xml_path)
-        if res != 0:
-            return res
-
-        # 更新用 ジョブ xml を Jenkins ジョブに登録
-        res = self.__execute_update_job_by_updating_xml(job_url.full, updating_xml_path)
-        if res != 0:
-            common.dump_error(f"update_job_by_updating_xml return {res}")
-            return res
-
-        return G_OK
-
-    def __execute_update_job_by_updating_xml(self, job_url: str, updating_xml_path: str) -> int:
-        return update_job_by_updating_xml.execute(["update_job_by_updating_xml.py", job_url, updating_xml_path])
 
 class EditJob:
     def __init__(self, json_path: str, execute_mode: ExecuteMode):
@@ -289,6 +253,42 @@ def execute_download_job_xml(job_url: str, save_xml_path: str) -> int:
 
 def execute_create_updating_job_xml(download_xml_path: str, job_script_path: str, updating_xml_path: str) -> int:
     return create_updating_job_xml.execute(["create_updating_job_xml.py", download_xml_path, job_script_path, updating_xml_path])
+
+def update_job(job_dir_url, job_script_dir_path, job_name, save_updating_xml_dir_path) -> int:
+    '''
+    指定ジョブ URL の指定ジョブ名のジョブスクリプトを更新する
+    出力として更新に使用する xml ファイルを残す
+    '''
+    job_url = common.JobUrl(f'{job_dir_url}/{job_name}')
+
+    # 更新に使用するジョブスクリプトファイルパス
+    job_script_path = get_job_script_path(job_script_dir_path, job_name)
+
+    # 更新するジョブの現在の設定 xml 保存先パス
+    download_xml_path = create_download_xml_path(save_updating_xml_dir_path, job_name)
+
+    # 更新に使用する xml パス
+    updating_xml_path = create_updating_xml_path(download_xml_path, job_name)
+
+    # 更新に使用するジョブスクリプトファイルがなければスキップ
+    if job_script_path == "":
+        return G_OK
+
+    # ジョブ xml のダウンロードと更新用ジョブ xml 作成
+    res = download_and_create_updating_xml(job_url, job_script_path, download_xml_path, updating_xml_path)
+    if res != 0:
+        return res
+
+    # 更新用 ジョブ xml を Jenkins ジョブに登録
+    res = execute_update_job_by_updating_xml(job_url.full, updating_xml_path)
+    if res != 0:
+        common.dump_error(f"update_job_by_updating_xml return {res}")
+        return res
+
+    return G_OK
+
+def execute_update_job_by_updating_xml(job_url: str, updating_xml_path: str) -> int:
+    return update_job_by_updating_xml.execute(["update_job_by_updating_xml.py", job_url, updating_xml_path])
 
 ################################################################################
 # 引数＆オプション 処理
