@@ -22,24 +22,30 @@ import common
 #   引数:
 #     ジョブ設定を記載した json ファイルパス
 #   機能
-#     json の通りにジョブをコピー／更新する
+#     json の通りにジョブをコピーしたり更新したりする
 # ex:
 #   export JENKINS_CLI_USER_NAME=admin
 #   export JENKINS_CLI_PASSWORD=password
-#   python3 edit_job.py "./input.json"
+#   python3 edit_job.py <-dc or -c or -u or -a> "./input.json"
 # json 例:
 # {
-#     "job_dir_urls": [
-#         "http://localhost:8080/job/job_folder"
+#     "job_update_urls": [
+#         "http://localhost:8080/job/user_work"
+#     ],
+#     "copy_urls": [
+#         {
+#             "src": "http://localhost:8080/job/user_work",
+#             "dst": "http://localhost:8080/job/user_work2"
+#         }
 #     ],
 #     "job_names": [
 #         "job_name_a",
 #         "job_name_b"
 #     ],
 #     // ジョブスクリプトファイルが存在するディレクトリパス
-#     "job_script_dir_path"     : "./__pycache__/script",
+#     "job_script_dir_path"     : "./script",
 #     // ジョブ更新に使用する xml ファイルを保存するディレクトリパス
-#     "update_xml_dir_root_path": "./__pycache__/save_xml"
+#     "update_xml_dir_root_path": "./save_xml"
 # }
 ################################################################################
 
@@ -52,7 +58,7 @@ G_ARGUMENT_ERROR = 12
 G_OPTIONS_ERROR = 13
 
 ################################################################################
-# クラス定義
+# クラス＆クラス共通関数定義
 ################################################################################
 class ExecuteMode(Enum):
     DownloadAndCreateXml = 1
@@ -60,6 +66,39 @@ class ExecuteMode(Enum):
     Copy = 3
     All = 4
     Unknown = 5
+
+class EditJob:
+    def __init__(self, json_path: str, execute_mode: ExecuteMode):
+        self.__json_info = JsonInfo(json_path)
+        self.__execute_mode = execute_mode
+
+    def execute(self) -> int:
+        # 環境変数確認
+        res = common.AppEnv().check()
+        if res != 0:
+            return G_ENV_ERROR
+
+        # モードに見合ったクラス名取得
+        process = self.__get_process_class(self.__execute_mode)
+
+        # 実行
+        return process(self.__json_info).execute()
+
+    def __get_process_class(self, execute_mode: ExecuteMode):
+        '''
+        in : 実行モード
+        out: クラス(JsonInfo を引数とするイニシャライザを持ち、execute() メソッドを持つこと)
+        '''
+        if self.__execute_mode == ExecuteMode.Copy:
+            return ProcessCopy
+        elif self.__execute_mode == ExecuteMode.DownloadAndCreateXml:
+            return ProcessDownloadAndCreateXml
+        elif self.__execute_mode == ExecuteMode.Update:
+            return ProcessUpdate
+        elif self.__execute_mode == ExecuteMode.All:
+            return ProcessAll
+        else:
+            raise("Execute mode is unknown.")
 
 class JsonInfo:
     def __init__(self, json_path: str):
@@ -197,39 +236,6 @@ class ProcessAll:
 
         return result
 
-class EditJob:
-    def __init__(self, json_path: str, execute_mode: ExecuteMode):
-        self.__json_info = JsonInfo(json_path)
-        self.__execute_mode = execute_mode
-
-    def execute(self) -> int:
-        # 環境変数確認
-        res = common.AppEnv().check()
-        if res != 0:
-            return G_ENV_ERROR
-
-        # モードに見合ったクラス名取得
-        process = self.__get_process_class(self.__execute_mode)
-
-        # 実行
-        return process(self.__json_info).execute()
-
-    def __get_process_class(self, execute_mode: ExecuteMode):
-        '''
-        in : 実行モード
-        out: クラス(JsonInfo を引数とするイニシャライザを持ち、execute() メソッドを持つこと)
-        '''
-        if self.__execute_mode == ExecuteMode.Copy:
-            return ProcessCopy
-        elif self.__execute_mode == ExecuteMode.Update:
-            return ProcessUpdate
-        elif self.__execute_mode == ExecuteMode.DownloadAndCreateXml:
-            return ProcessDownloadAndCreateXml
-        elif self.__execute_mode == ExecuteMode.All:
-            return ProcessAll
-        else:
-            raise("Execute mode is unknown.")
-
 ################################################################################
 # 関数定義
 ################################################################################
@@ -267,6 +273,10 @@ def is_extension_job_script(file_path: str) -> bool:
 def create_download_xml_path(update_xml_dir_path: str, job_name: str) -> str:
     return f"{update_xml_dir_path}/{job_name}.xml"
 
+def create_updating_xml_path(download_xml_path: str, job_name: str) -> str:
+    dir_path = os.path.dirname(download_xml_path)
+    return f"{dir_path}/{job_name}_new.xml"
+
 def download_and_create_updating_xml(job_url: common.JobUrl, job_script_path: str, download_xml_path: str, create_xml_path: str) -> int:
     '''
     指定ジョブ URL の指定ジョブ名のジョブスクリプトを更新するための xml を生成する
@@ -289,10 +299,6 @@ def download_and_create_updating_xml(job_url: common.JobUrl, job_script_path: st
         return res
 
     return G_OK
-
-def create_updating_xml_path(download_xml_path: str, job_name: str) -> str:
-    dir_path = os.path.dirname(download_xml_path)
-    return f"{dir_path}/{job_name}_new.xml"
 
 def execute_download_job_xml(job_url: str, save_xml_path: str) -> int:
     return download_job_xml.execute(["download_job_xml.py", job_url, save_xml_path])
