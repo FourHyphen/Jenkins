@@ -55,7 +55,7 @@ G_OPTIONS_ERROR = 13
 # クラス定義
 ################################################################################
 class ExecuteMode(Enum):
-    ReadOnly = 1
+    DownloadAndCreateXml = 1
     Update = 2
     Copy = 3
     All = 4
@@ -215,7 +215,7 @@ class EditJob:
             return ProcessCopy(self.__json_info).execute()
         elif self.__execute_mode == ExecuteMode.Update:
             return ProcessUpdate(self.__json_info).execute()
-        elif self.__execute_mode == ExecuteMode.ReadOnly:
+        elif self.__execute_mode == ExecuteMode.DownloadAndCreateXml:
             return ProcessDownloadAndCreateXml(self.__json_info).execute()
         elif self.__execute_mode == ExecuteMode.All:
             return self.__all()
@@ -295,28 +295,28 @@ def execute_create_updating_job_xml(download_xml_path: str, job_script_path: str
 ################################################################################
 def get_option():
     parser = ArgumentParser()
-    parser.add_argument('-r', '--readonly',
+    parser.add_argument('-dc', '--download_and_create_xml',
                         action='store_true',    # 本オプションが与えられたら True
-                        help='If define, not update(read and create xml for update).')
+                        help='If define, download and create xml for update.')
     parser.add_argument('-u', '--update',
                         action='store_true',
-                        help='If define, update(read and create xml for update and update by xml).')
+                        help='If define, update(download and create xml for update and update by xml).')
     parser.add_argument('-c', '--copy',
                         action='store_true',
                         help='If define, copy(copy folder src to dst).')
     parser.add_argument('-a', '--all',
                         action='store_true',
-                        help='If define, all(copy folder and read and update(dst)).')
+                        help='If define, all(copy folder and download and create xml and update(dst)).')
     parser.add_argument('pos', nargs='*')
     return parser.parse_args()
 
 def get_execute_mode(options) -> ExecuteMode:
-    true_options = [option for option in [options.readonly, options.update, options.copy, options.all] if option]
+    true_options = [option for option in [options.download_and_create_xml, options.update, options.copy, options.all] if option]
     if len(true_options) != 1:
         return ExecuteMode.Unknown
 
-    if options.readonly:
-        return ExecuteMode.ReadOnly
+    if options.download_and_create_xml:
+        return ExecuteMode.DownloadAndCreateXml
     elif options.update:
         return ExecuteMode.Update
     elif options.copy:
@@ -352,7 +352,7 @@ if __name__ == '__main__':
     # オプション確認
     execute_mode = get_execute_mode(args)
     if execute_mode == ExecuteMode.Unknown:
-        print("Please define -r or -u or -c or -a (only one).")
+        print("Please define -dc or -u or -c or -a (only one).")
         exit(G_OPTIONS_ERROR)
 
     # 引数確認
