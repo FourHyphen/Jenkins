@@ -32,14 +32,6 @@ docker-compose -f dc_update_jenkins_job.yml up -d
   - `JENKINS_CLI_PASSWORD`: Jenkins ユーザーのパスワード or トークン文字列
   - `PATH`: `jenkins-cli.jar` にパスが通っていること
     - PATH はコンテナ設定に含めているため基本編集不要
-- オプション:
-  - `-dc`, `-c`, `-u`, `-a` はいずれか 1 つを指定すること
-  - |略称 |別指定方法                 |説明|
-    |---  |---                        |--- |
-    |`-dc`|`--download_and_create_xml`|`job_update_urls` 記載の URL 内の `job_names` 記載の各種ジョブの xml をダウンロードし、`job_script_dir_path` 内の当該ジョブのスクリプトファイルを使用して当該ジョブ更新用 xml を生成する|
-    |`-u` |`--update`                 |`-dc` の処理実施後、当該ジョブを更新用xml を使用して更新する|
-    |`-c` |`--copy`                   |`copy_urls` 記載の `src` ジョブ(フォルダも可)を `dst` にコピーする|
-    |`-a` |`--all`                    |`-c` の処理実施後、`dst` 側 URL に対して `-u` の処理実施する|
 - 各種設定を記載した json ファイル
   - 引数に指定する
   - ```
@@ -70,34 +62,42 @@ docker-compose -f dc_update_jenkins_job.yml up -d
         "update_xml_dir_root_path": "/work/save_xml"
     }
     ```
+- オプション:
+  - `-dc`, `-c`, `-u`, `-a` はいずれか 1 つを指定すること
+  - |略称 |別指定方法                 |説明|
+    |---  |---                        |--- |
+    |`-dc`|`--download_and_create_xml`|`job_update_urls` 記載の URL 内の `job_names` 記載の各種ジョブの xml をダウンロードし、`job_script_dir_path` 内の当該ジョブのスクリプトファイルを使用して当該ジョブ更新用 xml を生成する|
+    |`-u` |`--update`                 |`-dc` の処理実施後、当該ジョブを更新用xml を使用して更新する|
+    |`-c` |`--copy`                   |`copy_urls` 記載の `src` ジョブ(フォルダも可)を `dst` にコピーする|
+    |`-a` |`--all`                    |`-c` の処理実施後、`dst` 側 URL に対して `-u` の処理実施する|
 
 ## out
 ### `-u` の場合
 - json 設定の `update_xml_dir_root_path` ディレクトリ
   - `yyyyMMdd_HHmmss` ディレクトリ
-    - json 設定の job_update_urls の 1 要素の URL (http文字列) ディレクトリ
-    - `ジョブ名.xml` -> スクリプト実行時の当該ジョブの設定内容
-    - `ジョブ名_new.xml` -> 更新内容
-    - json 設定の job_update_urls の 1 要素の URL (http文字列) ディレクトリ
-    - ・・・
-- json 設定の job_update_urls の 1 要素の URL を `ジョブ名_new.xml` で更新した結果(Jenkins 側)
+    - json 設定の `job_update_urls` の 1 要素の URL (http文字列) ディレクトリ
+      - `ジョブ名.xml` -> スクリプト実行時の当該ジョブの設定内容
+      - `ジョブ名_new.xml` -> 更新内容
+    - json 設定の `job_update_urls` の 1 要素の URL (http文字列) ディレクトリ
+      - ・・・
+- json 設定の `job_update_urls` の 1 要素の URL を `ジョブ名_new.xml` で更新した結果(Jenkins 側)
 
 ### `-dc` の場合
 - json 設定の `update_xml_dir_root_path` ディレクトリ
   - `-u` と同じ
 
 ### `-c` の場合
-- json 設定の copy_urls の 1 要素の `src` を `dst` にコピーした結果(Jenkins 側)
+- json 設定の `copy_urls` の 1 要素の `src` を `dst` にコピーした結果(Jenkins 側)
 
 ### `-a`
 - json 設定の `update_xml_dir_root_path` ディレクトリ
   - `yyyyMMdd_HHmmss` ディレクトリ
-    - json 設定の copy_urls の 1 要素の dst (http文字列) ディレクトリ
-    - `ジョブ名.xml` -> スクリプト実行時の当該ジョブの設定内容
-    - `ジョブ名_new.xml` -> 更新内容
-    - json 設定の copy_urls の 1 要素の dst (http文字列) ディレクトリ
-    - ・・・
-- json 設定の copy_urls の 1 要素の `src` を `dst` にコピーした上で `ジョブ名_new.xml` で更新した結果(Jenkins 側)
+    - json 設定の `copy_urls` の 1 要素の `dst` (http文字列) ディレクトリ
+      - `ジョブ名.xml` -> スクリプト実行時の当該ジョブの設定内容
+      - `ジョブ名_new.xml` -> 更新内容
+    - json 設定の `copy_urls` の 1 要素の `dst` (http文字列) ディレクトリ
+      - ・・・
+- json 設定の `copy_urls` の 1 要素の `src` を `dst` にコピーした上で `ジョブ名_new.xml` で更新した結果(Jenkins 側)
 
 # 4. 実行方法
 全てコンテナ内
@@ -139,7 +139,7 @@ input.json
             "job_name_b"
         ],
         // ジョブスクリプトファイルが存在するディレクトリパス
-        "job_script_dir_path"     : "./script",
+        "job_script_dir_path"     : "./job_scripts",
         // ジョブ更新に使用する xml ファイルを保存するディレクトリパス
         "update_xml_dir_root_path": "./save_xml"
     }
