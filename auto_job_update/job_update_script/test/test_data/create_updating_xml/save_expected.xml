@@ -1,0 +1,27 @@
+<flow-definition plugin="workflow-job@1186.v8def1a_5f3944">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2086.v12b_420f036e5" />
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2086.v12b_420f036e5">
+      <jobProperties />
+      <triggers />
+      <parameters />
+      <options />
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description />
+  <keepDependencies>false</keepDependencies>
+  <properties />
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2725.v7b_c717eb_12ce">
+    <script>// 日本語コメント
+def try() {
+    Map&lt;String, Integer&gt; map = new HashMap&lt;&gt;()
+
+    String text = 'private static string STR = "str"\n'
+    matching = /(?m)^(?:private|public)(?: +static +)? +(\w+) +\w+(?: *= *(["\w]+))?/
+}
+</script>
+    <sandbox>false</sandbox>
+  </definition>
+  <triggers />
+  <disabled>false</disabled>
+</flow-definition>

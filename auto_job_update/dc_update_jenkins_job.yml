@@ -1,0 +1,15 @@
+version: '3.3'
+services:
+  jenkins-job-update:
+    image: 'update-jenkins-job:latest'
+    container_name: 'update-jenkins-job'
+    environment:
+      http_proxy: $http_proxy
+      https_proxy: $https_proxy
+    tty: true
+    stdin_open: true
+    volumes:
+      - /:/host
+      - /var/run/docker.sock:/var/run/docker.sock
+
+

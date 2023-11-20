@@ -1,0 +1,120 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1186.v8def1a_5f3944">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2086.v12b_420f036e5"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2086.v12b_420f036e5">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2725.v7b_c717eb_12ce">
+    <script>import groovy.transform.CompileStatic
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+G_GLOVAL_NUM = 0    /* コメント: ここの間　全角スペース */
+
+/* マップ(ここタブ記号でインデント) */
+G_DO_STAGE = [
+	&apos;DO_STAGE_ENV&apos;:false,
+]
+
+pipeline {
+    agent any
+
+    stages {
+        stage(&quot;Hello World&quot;) {
+            steps {
+                echo &quot;##### Hello World! #####&quot;;
+            }
+        }
+
+        stage(&apos;try groovy&apos;) {
+            steps {
+                script {
+                    call_func();
+                }
+            }
+        }
+    }
+}
+
+
+/************************************************/
+/* 関数名: stage_world                          */
+/************************************************/
+def call_func() {
+    try_map()
+    try_date()
+    try_regex()
+}
+
+//////////////////////////////////////////////////
+// 関数名: try_map
+//////////////////////////////////////////////////
+def try_map() {
+    Map&lt;String, Integer&gt; map = new HashMap&lt;&gt;()
+    map[&apos;one&apos;] = 1    // Java はわからんが Groovy なら通る
+    map[&apos;two&apos;] = 2
+
+    println(map.keySet().toString())
+    println(map.values().toString())
+    println(map.size().toString())
+    map.each {
+        key, value -&gt; println(&quot;key: ${key} / value: ${value}&quot;)
+    }
+}
+
+//////////////////////////////////////////////////
+// 関数名: try_date
+//////////////////////////////////////////////////
+def try_date() {
+    // 現在時刻
+    def date = LocalDateTime.now()
+    println(date.format(DateTimeFormatter.ofPattern(&apos;yyyy/MM/dd HH:mm:ss.SSS&apos;)))
+
+    // 文字列の日付変換
+    String str = &apos;2022/03/19 12:34:56&apos;
+    date = LocalDateTime.parse(str, DateTimeFormatter.ofPattern(&apos;yyyy/MM/dd HH:mm:ss&apos;))
+    println(date.toString())
+
+    // 日付の演算
+    println(date.plusDays(10).toString())
+}
+
+//////////////////////////////////////////////////
+// 関数名: try_regex
+//////////////////////////////////////////////////
+def try_regex() {
+    String text = &apos;aaa0 bbb ccccc bbbaaa aaa1&apos;
+    def matching = (text =~ /\baaa[0-9]\b/)    // 戻り値: class java.util.regex.Matcher
+    matching?.toMatchResult()?.each {
+        println(it.toString())
+    }
+
+    // 何も気にしない場合、^ は文字列の最初にマッチする(\n直後にはマッチしない)
+    text = &apos;private static string STR = &quot;str&quot;\n&apos;
+    text += &apos;public int Number&apos;
+
+    // フラグ
+    // (?s) -&gt; . が \n にもマッチする(DotAll モード)
+    // (?m) -&gt; 複数行マッチモード(^ が \n 直後の行頭にマッチする)
+    matching = /(?m)^(?:private|public)(?: +static +)? +(\w+) +\w+(?: *= *([&quot;\w]+))?/
+    (text =~ matching)?.toMatchResult()?.each {
+        // it -&gt; class java.util.ArrayList
+        // 1回目: [private static string STR = &quot;str&quot;, string, &quot;str&quot;]
+        // 2回目: [public int Number, int, null]
+        println(it.toString())
+    }
+}
+</script>
+    <sandbox>false</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
