@@ -77,9 +77,13 @@ def check_skip_lines(def jenkinsfile, def common, StringBuilder sb) {
     test.add("if (match_num(line, /\"\"\"/) == 1) {")   // 31    \"\"\"はスキップしない
     test.add("    return true")                         // 32
     test.add("println(\"a \\\"\\\"\\\")")               // 33    \"\"\"はスキップしない
-    test.add("return true")                             // 34
+    test.add("g_not_skip = null    // ")                // 34
+    test.add("// g_skip = null")                        // 35
+    test.add("//")                                      // 36
+    test.add("//////////")                              // 37    ヘッダコメント部を想定、スキップする
+    test.add("return true")                             // 38
 
-    List expected = [2, 4, 8, 9, 10, 11, 12, 17, 21, 25, 30]
+    List expected = [2, 4, 8, 9, 10, 11, 12, 17, 21, 25, 30, 35, 36, 37]
     List skips = jenkinsfile.get_skip_line_nums(test)
 
     if (!common.are_equals(expected, skips, "", sb)) {
@@ -98,17 +102,19 @@ def check_comment(def jenkinsfile, def common, StringBuilder sb) {
                 "    */",
                 "/* OK */",
                 "/*",
-                "*/"
+                "*/",
+                "//",
+                "// ",
+                "    //",
+                "    // "
                ]
     if (!check_ok_pattern(jenkinsfile.&is_ok_comment, oks, common, sb)) {
         result = false
     }
 
     // NG パターン
-    List ngs = ["    // ",          // "//" は NG
-                "    /*NG */",      // 半角スペースない
+    List ngs = ["    /*NG */",      // 半角スペースない
                 "    /* NG*/",      // 半角スペースない
-                "//",
                 "/*NG */",
                 "/* NG*/"
                ]
@@ -225,15 +231,15 @@ def check_define_global_variable(def jenkinsfile, def common, StringBuilder sb) 
     // OK パターン
     List oks = ["g_value = null",
                 "g_value  =  null",    // 縦に合わせる場合があるので半角スペースが 1 つでも入ってれば OK
-                "g_value  ="           // 次の行に初期値記載の場合
+                "g_value  =",          // 次の行に初期値記載の場合
+                "g_Value = null"       // 大文字 OK
                ]
     if (!check_ok_pattern(jenkinsfile.&is_match_global_variable, oks, common, sb)) {
         result = false
     }
 
     // NG パターン
-    List ngs = ["g_valuE = null",    // 大文字使用
-                "g_value= null",     // 半角スペースない
+    List ngs = ["g_value= null",     // 半角スペースない
                 "g_value =null"      // 半角スペースない
                ]
     if (!check_ng_pattern(jenkinsfile.&is_match_global_variable, ngs, common, sb)) {
@@ -247,21 +253,22 @@ def check_define_func(def jenkinsfile, def common, StringBuilder sb) {
     boolean result = true
 
     // OK パターン
-    List oks = ["def func_define_ok1() {",
-                "def func_define_ok2(int arg) {",
-                "def func_define_ok3(int arg1, String arg2) {",
-                "def func_define_ok4(int arg1,"
+    List oks = ["def funcDefineOk1() {",
+                "def funcDefineOk2(int arg) {",
+                "def funcDefineOk3(int arg1, String arg2) {",
+                "def funcDefineOk4(int arg1,"
                ]
     if (!check_ok_pattern(jenkinsfile.&is_match_func_format, oks, common, sb)) {
         result = false
     }
 
     // NG パターン
-    List ngs = ["def func_define_ng1( ) {",                      // 半角スペース余計
-                "def func_define_ng2(){",                        // 半角スペースない
-                "def func_define_ng3( int arg1) {",              // 半角スペース余計
-                "def func_define_ng4(int arg1,  int arg2) {",    // 半角スペース余計
-                "def func_define_ng5(int  arg) {"                // 半角スペース余計
+    List ngs = ["def funcDefineNg1( ) {",                      // 半角スペース余計
+                "def funcDefineNg2(){",                        // 半角スペースない
+                "def funcDefineNg3( int arg1) {",              // 半角スペース余計
+                "def funcDefineNg4(int arg1,  int arg2) {",    // 半角スペース余計
+                "def funcDefineNg5(int  arg) {",               // 半角スペース余計
+                "def func_define_ng6() {"
                ]
     if (!check_ng_pattern(jenkinsfile.&is_match_func_format, ngs, common, sb)) {
         result = false

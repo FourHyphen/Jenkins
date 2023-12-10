@@ -221,11 +221,9 @@ def is_ok_comment(String line, int line_num) {
         return true
     }
 
-    /* "    //" 等、インデント + "//" の行は NG */
-    boolean result = true
+    /* "    //" 等、インデント + "//" の行は OK */
     if (line =~ '^ *//') {
-        result_append("[WARN] line ${line_num}: ${line}\n    comment -> /* ... */")
-        result = false
+        return true
     }
 
     // /* ... */ が 1 行に収まっている場合、半角スペースのチェック
@@ -233,11 +231,11 @@ def is_ok_comment(String line, int line_num) {
     if (line =~ /\/\*[^*].*\*\/ *?$/) {
         if (!line.contains("/* ") || !line.contains(" */")) {
             result_append("[WARN] line ${line_num}: ${line}\n    comment -> /* ... */")
-            result = false
+            return false
         }
     }
 
-    return result
+    return true
 }
 
 /**********************************************************
@@ -332,7 +330,7 @@ def is_match_func_format(String line, int line_num) {
     String match = ""
 
     /* 関数名や小かっこ */
-    match = "^def [^A-Z ]+\\((\\) \\{|[^ ].*?[^ ](,|\\) \\{))"
+    match = "^def [^_ ]+\\((\\) \\{|[^ ].*?[^ ](,|\\) \\{))"
     if (!(line =~ match)) {
         result_append("[ERROR] line ${line_num}: ${line}\n    func format -> ${match}")
         result = false
@@ -347,13 +345,13 @@ def is_match_func_format(String line, int line_num) {
     /* 小かっこ内、引数箇所 */
     String args = line.substring(line.indexOf("("))
     String reconstruct = ""
-    (args =~ "[A-Za-z0-9_]+ [A-Za-z0-9_]+(\\)|, |,|)").each {
+    (args =~ "[A-Za-z0-9]+ [A-Za-z0-9]+(\\)|, |,|)").each {
         reconstruct += it[0].toString()
     }
     debug_dump("reconstruct: ${reconstruct}")
 
     if (!line.contains(reconstruct) || reconstruct == "") {
-        result_append("[ERROR] line ${line_num}: ${line}\n    func arg format -> type arg_name, type arg_name")
+        result_append("[ERROR] line ${line_num}: ${line}\n    func arg format -> type argName, type argName")
         result = false
     }
 
@@ -370,7 +368,7 @@ def is_match_global_constant(String line, int line_num) {
 }
 
 def is_match_global_variable(String line, int line_num) {
-    if (!(line =~ /^g_[a-z0-9_]+ += +/) && !(line =~ /^g_[a-z0-9_]+ +=$/)) {
+    if (!(line =~ /^g_[A-Za-z0-9_]+ += +/) && !(line =~ /^g_[A-Za-z0-9_]+ +=$/)) {
         result_append("[ERROR] line ${line_num}: ${line}\n    global variable format -> ^g_[a-z0-9_]+ += +")
         return false
     }
