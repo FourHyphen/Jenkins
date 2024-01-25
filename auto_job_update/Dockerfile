@@ -31,8 +31,8 @@ RUN mkdir -p /work/git && mkdir /host
 WORKDIR /work
 
 # jenkins-cli.jar 配置
-COPY jenkins-cli.jar /work/jenkins-cli/
-ENV PATH $PATH:/work/jenkins-cli
+COPY jenkins-cli.jar /work
+ENV PATH $PATH:/work
 
 # スクリプト配置
 COPY job_update_script/ /work/job_update_script/

@@ -30,8 +30,8 @@ docker-compose -f dc_update_jenkins_job.yml up -d
 - 環境変数
   - `JENKINS_CLI_USER_NAME`: Jenkins ユーザー名
   - `JENKINS_CLI_PASSWORD`: Jenkins ユーザーのパスワード or トークン文字列
-  - `PATH`: `jenkins-cli.jar` にパスが通っていること
-    - PATH はコンテナ設定に含めているため基本編集不要
+  - `PATH`: `jenkins-cli.jar` をコマンド実行場所※に配置すること
+    - `/work` で実行することを想定し、コンテナ設定で `/work` に配置している
 - 各種設定を記載した json ファイル
   - 引数に指定する
   - ```
@@ -72,7 +72,7 @@ docker-compose -f dc_update_jenkins_job.yml up -d
     |`-a` |`--all`                    |`-c` の処理実施後、`dst` 側 URL に対して `-u` の処理実施する|
 
 ## out
-### `-u` の場合
+### `-u`
 - json 設定の `update_xml_dir_root_path` ディレクトリ
   - `yyyyMMdd_HHmmss` ディレクトリ
     - json 設定の `job_update_urls` の 1 要素の URL (http文字列) ディレクトリ
@@ -82,11 +82,11 @@ docker-compose -f dc_update_jenkins_job.yml up -d
       - ・・・
 - json 設定の `job_update_urls` の 1 要素の URL を `ジョブ名_new.xml` で更新した結果(Jenkins 側)
 
-### `-dc` の場合
+### `-dc`
 - json 設定の `update_xml_dir_root_path` ディレクトリ
   - `-u` と同じ
 
-### `-c` の場合
+### `-c`
 - json 設定の `copy_urls` の 1 要素の `src` を `dst` にコピーした結果(Jenkins 側)
 
 ### `-a`
@@ -108,7 +108,8 @@ export JENKINS_CLI_USER_NAME=xxxxxxxx
 export JENKINS_CLI_USER_NAME=yyyyyyyy
 
 # 以下は docker イメージに組み込んでいるためユーザー操作不要
-export PATH=${PATH}:＜jenkins-cli.jar 配置場所＞
+# /work: jenkins-cli.jar 配置場所
+export PATH=${PATH}:/work
 ```
 
 ## 入力例
@@ -153,6 +154,7 @@ http://localhost:8080/
 
 ## コマンド
 ```
+cd /work
 python3 ./script/edit_job.py -a ./input.json
 
 # ジョブ更新内容を確認するだけの場合
