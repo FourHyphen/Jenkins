@@ -89,25 +89,26 @@ class JobUrl:
 
     def __get_master_url(self, full: str) -> str:
         '''
-        in : http://localhost:8080/job/job_auto_update/job/build
+        in : http://localhost:8080/job/job_auto_update_job/job/build
         out: http://localhost:8080/
         '''
         return re.sub(r"(https?://[^/]+/).*", r"\1", full)
 
     def __get_job_relative_path(self, full: str) -> str:
         '''
-        in : http://localhost:8080/job/job_auto_update/job/build
-        out: job_auto_update/build
+        in : http://localhost:8080/job/job_auto_update_job/job/build
+        out: job_auto_update_job/build
         '''
-        # マスター部分(https?://localhost:8080/)以降の文字列取得
-        tmp = re.sub(r"https?://[^/]+/(.*)", r"\1", full)
+        # マスター部分(https?://localhost:8080)以降の文字列取得
+        tmp = re.sub(r"https?://[^/]+(.*)", r"\1", full)
 
-        # "job/" を全て削除
-        return tmp.replace("job/", "")
+        # 不要個所を削除して調整
+        tmp = tmp.replace("/job/", "/")
+        return tmp[1:]    # 先頭の / を削除
 
     def __get_job_name(self, full: str) -> str:
         '''
-        in : http://localhost:8080/job/job_auto_update/job/build
+        in : http://localhost:8080/job/job_auto_update_job/job/build
         out: build
         '''
         # 末尾がジョブ名

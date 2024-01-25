@@ -26,24 +26,24 @@ class TestMain(unittest.TestCase):
         '''
         ジョブ URL がポート番号付きの場合に JobUrl クラスインスタンス化に成功する
         '''
-        url = "http://localhost:8080/job/job_auto_update/job/build"
+        url = "http://localhost:8080/job/job_auto_update_job/job/build"
         job_url = common.JobUrl(url)
 
         self.assertEqual(url, job_url.full)
         self.assertEqual("http://localhost:8080/", job_url.master)
-        self.assertEqual("job_auto_update/build", job_url.relative_path)
+        self.assertEqual("job_auto_update_job/build", job_url.relative_path)
         self.assertEqual("build", job_url.job_name)
 
     def test_success_create_job_url_when_url_no_port(self):
         '''
         ジョブ URL がポート番号なしの場合に JobUrl クラスインスタンス化に成功する
         '''
-        url = "http://localhost/job/job_auto_update/job/build"
+        url = "http://localhost/job/job_auto_update_job/job/build"
         job_url = common.JobUrl(url)
 
         self.assertEqual(url, job_url.full)
         self.assertEqual("http://localhost/", job_url.master)
-        self.assertEqual("job_auto_update/build", job_url.relative_path)
+        self.assertEqual("job_auto_update_job/build", job_url.relative_path)
         self.assertEqual("build", job_url.job_name)
 
 if __name__ == '__main__':
