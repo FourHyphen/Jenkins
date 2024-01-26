@@ -26,7 +26,7 @@ class AppEnv:
 
     @property
     def jenkins_cli_jar_path(self):
-        # 環境都合上コマンド実行箇所に jar が存在する制約
+        # コマンド実行箇所に jar が存在する前提
         return G_JENKINS_CLI_JAR_NAME
 
     def __which(self, path: str) -> bool:
@@ -51,7 +51,7 @@ class AppEnv:
         self.__dump_error("error: 以下環境変数を定義してから実行")
         self.__dump_error(f"  {G_JENKINS_CLI_ENV_USER_NAME}: jenkins-cli.jar 実行時のユーザー名")
         self.__dump_error(f"  {G_JENKINS_CLI_ENV_PASSWORD} : jenkins-cli.jar 実行時のパスワード or トークン")
-        self.__dump_error(f"  jenkins-cli.jar をコマンド実行場所直下に配置する")
+        self.__dump_error(f"  jenkins-cli.jar を PATH に追加する")
 
     def __dump_error(self, str_: str) -> None:
         print(str_, file=sys.stderr)

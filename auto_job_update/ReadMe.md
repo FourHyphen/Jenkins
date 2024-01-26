@@ -23,15 +23,27 @@ docker-compose -f dc_update_jenkins_job.yml up -d
 ## 更新に使用するジョブスクリプトをコンテナから見える場所に配置
 - パスはどこでも OK
 
-# 3. in/out
+# 3. コンテナ環境
+## `/work`
+|ファイルフォルダ名|説明|
+|---               |--- |
+|ReadMe.md         |本 ReadMe|
+|example           |例として極力使用できる input.json およびスクリプトファイル|
+|git               |ここに更新するジョブのスクリプトファイルを置く想定|
+|jenkins-cli.jar   |-|
+|script            |本機能スクリプトファイル群|
+
+# 4. in/out
 全てコンテナ内
 
 ## in
+- 前提
+  - `/work` でコマンドを実行する
 - 環境変数
   - `JENKINS_CLI_USER_NAME`: Jenkins ユーザー名
   - `JENKINS_CLI_PASSWORD`: Jenkins ユーザーのパスワード or トークン文字列
-  - `PATH`: `jenkins-cli.jar` をコマンド実行場所※に配置すること
-    - `/work` で実行することを想定し、コンテナ設定で `/work` に配置している
+  - `PATH`: `jenkins-cli.jar` 配置場所をパスに追加すること
+    - `/work` で実行する前提とし、コンテナ設定で `/work` に配置している
 - 各種設定を記載した json ファイル
   - 引数に指定する
   - ```
@@ -99,7 +111,7 @@ docker-compose -f dc_update_jenkins_job.yml up -d
       - ・・・
 - json 設定の `copy_urls` の 1 要素の `src` を `dst` にコピーした上で `ジョブ名_new.xml` で更新した結果(Jenkins 側)
 
-# 4. 実行方法
+# 5. 実行方法
 全てコンテナ内
 
 ## 環境変数設定
@@ -186,7 +198,7 @@ http://localhost:8080/
 ┗ job/user_work3    -> 変化なし(コピーに失敗するので何もしない)
 ```
 
-# 4. スクリプト構成
+# 6. スクリプト構成
 ```
 edit_job.py
     ジョブの xml ダウンロード
@@ -199,7 +211,7 @@ edit_job.py
      -> common.py
 ```
 
-# 5. Licence
+# 7. Licence
 - [MIT](https://github.com/tcnksm/tool/blob/master/LICENCE)
 
 # 参考: jenkins-cli.jar 使い方
