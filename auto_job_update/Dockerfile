@@ -26,6 +26,10 @@ RUN apt -y update && \
     python3 -m pip install --upgrade pip && \
     ln -s /usr/bin/python3.8 /usr/bin/python        
 
+# コンテナ内の日本語表示設定
+ENV LANG=C.UTF-8
+ENV LANGUAGE=en_US:
+
 # 各種ディレクトリ作成＆作業ディレクトリ設定設定
 RUN mkdir -p /work/git && mkdir /host
 WORKDIR /work
@@ -34,5 +38,7 @@ WORKDIR /work
 COPY jenkins-cli.jar /work
 ENV PATH $PATH:/work
 
-# スクリプト配置
+# スクリプト、ReadMe、json 例を配置
 COPY job_update_script/ /work/job_update_script/
+COPY ReadMe.md /work
+COPY example.json /work
