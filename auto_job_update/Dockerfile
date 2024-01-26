@@ -38,7 +38,7 @@ WORKDIR /work
 COPY jenkins-cli.jar /work
 ENV PATH $PATH:/work
 
-# スクリプト、ReadMe、json 例を配置
+# スクリプト、ReadMe、例を配置
 COPY job_update_script/ /work/job_update_script/
 COPY ReadMe.md /work
-COPY example.json /work
+COPY example/ /work/example/

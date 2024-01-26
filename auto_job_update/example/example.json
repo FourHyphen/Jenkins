@@ -1,0 +1,18 @@
+{
+    "job_update_urls": [
+        "http://localhost:8080/job/job_auto_update2"
+    ],
+    "copy_urls": [
+        {
+            "src": "http://localhost:8080/job/job_auto_update",
+            "dst": "http://localhost:8080/job/job_auto_update2"
+        }
+    ],
+    "job_names": [
+        "job_a",
+        "job_b",
+        "job_c_freestyle"
+    ],
+    "job_script_dir_path"     : "./example",
+    "update_xml_dir_root_path": "./example/save_xml"
+}
