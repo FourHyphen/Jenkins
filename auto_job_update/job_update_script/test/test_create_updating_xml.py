@@ -133,6 +133,9 @@ class TestMain(unittest.TestCase):
             for elem in builders:
                 if elem.tag == 'command':
                     self.assertEqual("import\n", elem.text)
+                    return
+
+        raise Exception('no check "command"')
 
     def test_update_job_contents_freestyle_scriptText(self):
         '''
@@ -145,8 +148,11 @@ class TestMain(unittest.TestCase):
 
         for builders in base_xml_root.find('builders'):
             for elem in builders:
-                if elem.tag == 'command':
+                if elem.tag == 'scriptText':
                     self.assertEqual("import\n", elem.text)
+                    return
+
+        raise Exception('no check "scriptText"')
 
     def test_exception_if_job_contents_freestyle_do_not_exist_command_or_scriptText(self):
         '''
