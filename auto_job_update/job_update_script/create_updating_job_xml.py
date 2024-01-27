@@ -104,11 +104,12 @@ def update_job_contents_freestyle(base_xml_root, job_script_contents: str) -> No
     # <project>
     #   <builders>
     #     <hudson.tasks.Shell>
-    #       <command>ここがスクリプト</command>
+    #       <command or scriptText>ここがスクリプト</command or scriptText>
     for builders in base_xml_root.find('builders'):
         for elem in builders:
-            if elem.tag == 'command':
+            if elem.tag == 'command' or elem.tag == 'scriptText':
                 elem.text = job_script_contents
+                return
 
     raise Exception('freestyle xml does not have "<builders><command>" or "<builders><scriptText>"')
 

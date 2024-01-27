@@ -104,7 +104,7 @@ class TestMain(unittest.TestCase):
         base_xml_root = create_updating_job_xml.read_xml(os.path.join(G_TEST_DATA_ROOT, "base_xml_root.xml"))
         job_script = create_updating_job_xml.read_file_utf_without_bom(os.path.join(G_TEST_DATA_ROOT, "new_job_script.jenkinsfile"))
 
-        res = create_updating_job_xml.update_job_contents(base_xml_root, job_script)
+        create_updating_job_xml.update_job_contents(base_xml_root, job_script)
 
         for i in base_xml_root.find('definition'):
             if i.tag == 'script':
@@ -119,6 +119,34 @@ class TestMain(unittest.TestCase):
 
         with self.assertRaises(Exception):
             create_updating_job_xml.update_job_contents(base_xml_root, job_script)
+
+    def test_update_job_contents_freestyle_command(self):
+        '''
+        パイプラインジョブのベース xml の builders の下の command 階層に新規ジョブスクリプトを上書き設定する
+        '''
+        base_xml_root = create_updating_job_xml.read_xml(os.path.join(G_TEST_DATA_ROOT, "freestyle_xml_root_command.xml"))
+        job_script = create_updating_job_xml.read_file_utf_without_bom(os.path.join(G_TEST_DATA_ROOT, "new_job_script.jenkinsfile"))
+
+        create_updating_job_xml.update_job_contents(base_xml_root, job_script)
+
+        for builders in base_xml_root.find('builders'):
+            for elem in builders:
+                if elem.tag == 'command':
+                    self.assertEqual("import\n", elem.text)
+
+    def test_update_job_contents_freestyle_scriptText(self):
+        '''
+        パイプラインジョブのベース xml の builders の下の scriptText 階層に新規ジョブスクリプトを上書き設定する
+        '''
+        base_xml_root = create_updating_job_xml.read_xml(os.path.join(G_TEST_DATA_ROOT, "freestyle_xml_root_scriptText.xml"))
+        job_script = create_updating_job_xml.read_file_utf_without_bom(os.path.join(G_TEST_DATA_ROOT, "new_job_script.jenkinsfile"))
+
+        create_updating_job_xml.update_job_contents(base_xml_root, job_script)
+
+        for builders in base_xml_root.find('builders'):
+            for elem in builders:
+                if elem.tag == 'command':
+                    self.assertEqual("import\n", elem.text)
 
     def test_exception_if_job_contents_freestyle_do_not_exist_command_or_scriptText(self):
         '''
