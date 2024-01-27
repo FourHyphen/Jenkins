@@ -97,7 +97,7 @@ def update_job_contents_pipeline(base_xml_root, job_script_contents: str) -> Non
             i.text = job_script_contents
             return
 
-    raise Exception('xml does not have "<definition><script>"')
+    raise Exception('pipeline xml does not have "<definition><script>"')
 
 def update_job_contents_freestyle(base_xml_root, job_script_contents: str) -> None:
     # <?xml version='1.1' encoding='UTF-8'?>
@@ -109,6 +109,8 @@ def update_job_contents_freestyle(base_xml_root, job_script_contents: str) -> No
         for elem in builders:
             if elem.tag == 'command':
                 elem.text = job_script_contents
+
+    raise Exception('freestyle xml does not have "<builders><command>" or "<builders><scriptText>"')
 
 def save_xml(xml_root, out_xml_path: str) -> None:
     # write 時の xml エスケープで '" はそのまま残る、このまま jenkins-cli.jar に通して OK

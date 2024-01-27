@@ -120,6 +120,16 @@ class TestMain(unittest.TestCase):
         with self.assertRaises(Exception):
             create_updating_job_xml.update_job_contents(base_xml_root, job_script)
 
+    def test_exception_if_job_contents_freestyle_do_not_exist_command_or_scriptText(self):
+        '''
+        フリースタイルジョブのベース xml の builders 階層に command も scriptText も存在しない場合に例外を送出する
+        '''
+        base_xml_root = create_updating_job_xml.read_xml(os.path.join(G_TEST_DATA_ROOT, "freestyle_xml_root_no_definition_command_or_scriptText.xml"))
+        job_script = create_updating_job_xml.read_file_utf_without_bom(os.path.join(G_TEST_DATA_ROOT, "new_job_script.jenkinsfile"))
+
+        with self.assertRaises(Exception):
+            create_updating_job_xml.update_job_contents(base_xml_root, job_script)
+
     def test_save_xml(self):
         xml_root = create_updating_job_xml.read_xml(os.path.join(G_TEST_DATA_ROOT, "save.xml"))
         out_xml_path = os.path.join(G_TEST_DATA_ROOT, "save_actual.xml")
