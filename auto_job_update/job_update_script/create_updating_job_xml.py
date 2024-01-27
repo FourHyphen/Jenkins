@@ -95,6 +95,9 @@ def update_job_contents_pipeline(base_xml_root, job_script_contents: str) -> Non
     for i in base_xml_root.find('definition'):
         if i.tag == 'script':
             i.text = job_script_contents
+            return
+
+    raise Exception('xml does not have "<definition><script>"')
 
 def update_job_contents_freestyle(base_xml_root, job_script_contents: str) -> None:
     # <?xml version='1.1' encoding='UTF-8'?>
