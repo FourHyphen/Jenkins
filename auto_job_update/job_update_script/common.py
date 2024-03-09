@@ -29,9 +29,6 @@ class AppEnv:
         # コマンド実行箇所に jar が存在する前提
         return G_JENKINS_CLI_JAR_NAME
 
-    def __which(self, path: str) -> bool:
-        return shutil.which(path)
-
     def __init__(self):
         self.__user_name = os.getenv(G_JENKINS_CLI_ENV_USER_NAME)
         self.__password = os.getenv(G_JENKINS_CLI_ENV_PASSWORD)
@@ -41,24 +38,16 @@ class AppEnv:
             self.__dump_errors()
             return G_ENV_DO_NOT_DEFINE
 
-        if not self.__is_pass_working(G_JENKINS_CLI_JAR_NAME):
-            self.__dump_errors()
-            return G_ENV_DO_NOT_DEFINE
-
         return G_OK
 
     def __dump_errors(self) -> None:
         self.__dump_error("error: 以下環境変数を定義してから実行")
         self.__dump_error(f"  {G_JENKINS_CLI_ENV_USER_NAME}: jenkins-cli.jar 実行時のユーザー名")
         self.__dump_error(f"  {G_JENKINS_CLI_ENV_PASSWORD} : jenkins-cli.jar 実行時のパスワード or トークン")
-        self.__dump_error(f"  jenkins-cli.jar を PATH に追加する")
+        self.__dump_error(f"  前提: コマンド実行箇所に jenkins-cli.jar が存在する")
 
     def __dump_error(self, str_: str) -> None:
         print(str_, file=sys.stderr)
-
-    def __is_pass_working(self, path: str) -> bool:
-        '''パスが通っているかを返す'''
-        return self.__which(path) != None
 
 class JobUrl:
     @property

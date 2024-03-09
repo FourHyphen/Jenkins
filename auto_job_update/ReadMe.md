@@ -38,12 +38,11 @@ docker-compose -f dc_update_jenkins_job.yml up -d
 
 ## in
 - 前提
-  - `/work` でコマンドを実行する
+  - `cd /work` 後にコマンドを実行する
+    - この前提のもと、`jenkins-cli.jar` を `/work` に配置している
 - 環境変数
   - `JENKINS_CLI_USER_NAME`: Jenkins ユーザー名
   - `JENKINS_CLI_PASSWORD`: Jenkins ユーザーのパスワード or トークン文字列
-  - `PATH`: `jenkins-cli.jar` 配置場所をパスに追加すること
-    - `/work` で実行する前提とし、コンテナ設定で `/work` に配置している
 - 各種設定を記載した json ファイル
   - 引数に指定する
   - ```
@@ -118,10 +117,6 @@ docker-compose -f dc_update_jenkins_job.yml up -d
 ```
 export JENKINS_CLI_USER_NAME=xxxxxxxx
 export JENKINS_CLI_USER_NAME=yyyyyyyy
-
-# 以下は docker イメージに組み込んでいるためユーザー操作不要
-# /work: jenkins-cli.jar 配置場所
-export PATH=${PATH}:/work
 ```
 
 ## 入力例
