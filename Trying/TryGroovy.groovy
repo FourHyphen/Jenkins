@@ -4,26 +4,40 @@ import java.time.format.DateTimeFormatter
 import org.codehaus.groovy.runtime.StackTraceUtils
 
 DO_STAGE = [
-    'DO_STAGE_ENV':false,
-    'DO_STAGE_ADD':false,
-    'DO_STAGE_STRING':false,
-    'DO_STAGE_ENUM':false,
-    'DO_STAGE_LIST':false,
-    'DO_STAGE_DICT':false,
-    'DO_STAGE_IF':false,
-    'DO_STAGE_CLOSURE':false,
-    'DO_STAGE_FOR':false,
-    'DO_STAGE_MAP':false,
-    'DO_STAGE_REFLECTION':false,
-    'DO_STAGE_ANNOTATION':false,
-    'DO_STAGE_DATE':false,
-    'DO_STAGE_REGEX':false,
-    'DO_STAGE_OTHER':true,
-    'DUMMY':false    // コピペが楽になるように
+    'DO_STAGE_ENV': false,
+    'DO_STAGE_ADD': false,
+    'DO_STAGE_STRING': false,
+    'DO_STAGE_ENUM': false,
+    'DO_STAGE_LIST': false,
+    'DO_STAGE_DICT': false,
+    'DO_STAGE_IF': false,
+    'DO_STAGE_CLOSURE': false,
+    'DO_STAGE_FOR': false,
+    'DO_STAGE_MAP': false,
+    'DO_STAGE_REFLECTION': false,
+    'DO_STAGE_ANNOTATION': false,
+    'DO_STAGE_DATE': true,
+    'DO_STAGE_REGEX': false,
+    'DO_STAGE_STACK_TRACE': false,
+    'DO_STAGE_PIPELINE_SYNTAX': false,
+    'DO_STAGE_REFERENCES': true,
+    'DO_STAGE_OTHER': true,
+    'DUMMY': false    // コピペが楽になるように
 ]
 
 pipeline {
     agent any
+
+    // 参考: https://www.jenkins.io/doc/book/pipeline/syntax/
+    options { timestamps() }
+    parameters {
+        // text -> string の複数行
+        string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
+        text(name: 'BIOGRAPHY', defaultValue: '', description: 'Enter some information about the person')
+        booleanParam(name: 'TOGGLE', defaultValue: true, description: 'Toggle this value')
+        choice(name: 'CHOICE', choices: ['One', 'Two', 'Three'], description: 'Pick something')
+        password(name: 'PASSWORD', defaultValue: 'SECRET', description: 'Enter a password')
+    }
 
     stages {
         // expression: 中で true 返したときだけ実行
@@ -133,6 +147,61 @@ pipeline {
             steps { script { try_regex() } }
         }
 
+        stage('Stack Trace') {
+            when { allOf { expression { return DO_STAGE['DO_STAGE_STACK_TRACE'] } } }
+            steps { script { try_stack_trace() } }
+        }
+
+        stage('Pipeline Syntax') {
+            // 参考: https://www.jenkins.io/doc/book/pipeline/syntax/
+            when { allOf { expression { return DO_STAGE['DO_STAGE_PIPELINE_SYNTAX'] } } }
+            // retry(3) -> 2 回の失敗までリトライ、3 回目の失敗で終了
+            //     options { retry(3) }
+            //     steps { script { error("stage Option: options retry check") } }
+
+            // timeout() -> タイムアウト条件を満たしたらジョブが ABORTED になる
+            // Timeout set to expire in 3 sec
+            // Cancelling nested steps due to timeout
+            //     options { timeout(time: 3, unit: 'SECONDS') }
+            //     steps { script { sleep(10) } }
+
+            // tools -> 自動的にインストールされるもの
+            // tools { maven 'apache-maven-3.0.1'  }
+
+            // triggers -> cron トリガーも仕込める
+            // triggers { cron('H */4 * * 1-5') }
+
+            // input -> ユーザー入力を待つ
+            // input {
+            //     message "Should we continue?"
+            //     ok "Yes, we should."
+            //     submitter "alice,bob"
+            //     parameters {
+            //         string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
+            //     }
+            // }
+
+            // parallel の各 stage は上記の when の実行条件を無視する？
+            // parallel {
+            //     // failFast true    // 1 つのステージで失敗したら残りを失敗とする設定だが以下エラーとなった
+            //     // org.codehaus.groovy.control.MultipleCompilationErrorsException: startup failed
+            //     stage ("Parallel A") {
+            //         // failFast true でない場合、他ステージが失敗してもこれは最後まで実行された
+            //         steps { script { sleep(10) } }
+            //     }
+            //     stage ("Parallel B") {
+            //         steps { script { error("Parallel B Error") } }
+            //     }
+            // }
+
+            steps { script { println("dummy") } }    // 実行するものが何もないとエラーするので記載
+        }
+
+        stage('References') {
+            when { allOf { expression { return DO_STAGE['DO_STAGE_REFERENCES'] } } }
+            steps { script { references() } }
+        }
+
         stage('Other') {
             when { allOf { expression { return DO_STAGE['DO_STAGE_OTHER'] } } }
             steps { script { try_other() } }
@@ -193,7 +262,6 @@ def try_enum() {
     out_console(b.toString())    // 'BRONZE'
     out_console(get_class_name(b))    // 'Rank'
     // out_console((Rank.SILVER).toInteger().toString())        // Rank に toInteger() はないエラー？
-    // out_console(Integer.parseInt("2").toString())            // 変換可能
     // out_console(Integer.parseInt(Rank.SILVER).toString())    // 変換不可
 }
 
@@ -214,8 +282,9 @@ def try_list() {
     def list3 = list1 + list2        // リスト連結しても当然元のは変わらない
     out_console(list1.toString())
     out_console(list2.toString())
-    out_console(list3.toString())
+    out_console(list3.toString())    // [ABC, 10, DEF, 20, GHI, 30, 40, 50]
 
+    // リストの引き算が可能
     def list4 = list3 - ['ABC', 40]
     out_console(list4.toString())    // '[10, DEF, 20, GHI, 30, 50]'
 
@@ -231,16 +300,12 @@ def try_list() {
 
     // https://koji-k.github.io/groovy-tutorial/collection/list.html#collect
     list5 = (0..10).toList()    // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    out_console(list5.toString())
     list6 = list5.findAll { it % 2 == 0 }    // [0, 2, 4, 6, 8, 10]
-    out_console(list6.toString())
     value = list5.findAll { it % 2 == 0}
                  .inject { sum, it -> sum + it }    // 30 = 0 + 2 + 4 + 6 + 8 + 10
-    out_console(value.toString())
 
     // inject 例) max 取得
-    max = list5.inject { now_max, it -> now_max < it ? it : now_max }
-    out_console(max.toString())    // 10
+    max = list5.inject { now_max, it -> now_max < it ? it : now_max }    // 10
 }
 
 void try_dict() {
@@ -356,6 +421,7 @@ def try_for() {
 }
 
 def try_map() {
+    // int を使おうとすると WorkflowScript: 355: primitive type parameters not allowed here となった
     Map<String, Integer> map = new HashMap<>()
     map['one'] = 1    // Java はわからんが Groovy なら通る
     map['two'] = 2
@@ -375,7 +441,7 @@ def try_reflection() {
 
 @CompileStatic
 // @TypeChecked
-Integer try_annotation() {
+int try_annotation() {
     // TypeChecked 効いてない、実行時エラーになった
     // out_console(not_exist.toString())
     // TypeChecked 効いてない、エラーしなかった
@@ -398,6 +464,9 @@ def try_date() {
 
     // 日付の演算
     println(date.plusDays(10).toString())
+
+    // groovy の date 関数は Jenkins では使えない模様
+    // println(date(2019, 1, 31))    // hudson.remoting.ProxyException: groovy.lang.MissingMethodException: No signature of method:
 }
 
 def try_regex() {
@@ -459,37 +528,58 @@ def try_regex() {
     }
 }
 
-def try_other() {
-    String str = "str"
-    out_console((str instanceof String).toString())    // true
+def try_stack_trace() {
+    // String str = "str"
+    // out_console((str instanceof String).toString())    // true
 
-    try {
-        StackTraceElement current = Thread.currentThread().getStackTrace()[1]
-        println(current.getMethodName())    // "invoke0"
-    } catch (Exception e) {
-        println(e.toString())
-    }
+    StackTraceElement[] ste = new Throwable().getStackTrace()
+    println("ste[0] -----------------------------------------------")
+    println(ste[0].getClassName())      // クラス名を取得          WorkflowScript
+    println(ste[0].getMethodName())     // メソッド名を取得        try_other
+    println(ste[0].getFileName())       // ファイル名を取得        WorkflowScript
+    println(ste[0].getLineNumber())     // 行番号を取得            463
+    println(ste[0].isNativeMethod())    // nativeメソッドか判定    false
+    println(ste[0])                     // スタックトレースの情報を整形して表示
+    println("ste[0] -----------------------------------------------")
 
-    try {
-        // import org.codehaus.groovy.runtime.StackTraceUtils
-        def current =  StackTraceUtils.sanitize(new Throwable()).getStackTrace()[0]
-        println(current.methodName)
-    } catch (Exception e) {
-        println(e.toString())
-    }
+    println("ste[1] -----------------------------------------------")
+    println(ste[1].getMethodName())     // メソッド名を取得        run
+    println(ste[1].getLineNumber())     // 行番号を取得            138 = この関数を呼び出した行数
+    println("ste[1] -----------------------------------------------")
 
-    try {
-        println(get_method_name_question())
-    } catch (Exception e) {
-        println(e.toString())
-    }
+    // 現在の関数名
+    // import org.codehaus.groovy.runtime.StackTraceUtils
+    def current = StackTraceUtils.sanitize(new Throwable()).getStackTrace()[0]
+    println(current.methodName)    // try_other
+
+    show_method_name()
 }
 
-def get_method_name_question() {
+def show_method_name() {
+    // 今の関数を取得
     def current =  StackTraceUtils.sanitize(new Throwable()).getStackTrace()[0]
-    println("getStackTrace()[0].methodName: ${current.methodName}")
+    println("getStackTrace()[0].methodName: ${current.methodName}")    // get_method_name_question
 
+    // この関数を呼び出した関数を取得
     def before =  StackTraceUtils.sanitize(new Throwable()).getStackTrace()[1]
-    println("getStackTrace()[1].methodName: ${before.methodName}")
-    return before
+    println("getStackTrace()[1].methodName: ${before.methodName}")    // try_other
+}
+
+void references() {
+    println("Jenkins ------------------------------------------------------")
+    println("自動テスト: https://github.com/jenkinsci/JenkinsPipelineUnit")
+    println("Pipeline Syntax: https://www.jenkins.io/doc/book/pipeline/syntax/")
+    println("groovy -------------------------------------------------------")
+    println("https://docs.oracle.com/cd/E83857_01/paas/app-builder-cloud/visual-builder-groovy/groovy-basics.html")
+}
+
+void try_other() {
+    println("try_other()")
+    // nvl() -> 使えないっぽい
+    // String test = null
+    // println(nvl(test, "val 'test' is null."))    // java.lang.NoSuchMethodError: No such DSL method 'nvl'
+    // import java.lang.Object しても Strings がないと言われた
+    // println(Strings.nvl(test, "val 'test' is null."))
+
+
 }
