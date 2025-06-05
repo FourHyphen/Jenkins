@@ -49,14 +49,19 @@ def pre_process() {
     sh('ls -l')
 }
 
-def stage_a() {
+void stage_a() {
     println("stage_a()")
     sh('find ./ -type f')
 
     jenkinsfile = load("1_job_multi_files/stage_a.groovy")
-    def data_a = new jenkinsfile.DataA()
-    data_a.name = "Tsumugi"
-    data_a.age = 17
+    def input_json = jenkinsfile.create_input_json("Tsumugi", 17)
+    try {
+        input_json.name = "Mizuki"
+        println("InputJson.name can read and write: writing \"${input_json.name}\"")
+    } catch(Exception e) {
+        println(e.toString())
+        println("InputJson.name is read only.")
+    }
 
-    jenkinsfile.stage_a(data_a)
+    jenkinsfile.stage_a(input_json)
 }
