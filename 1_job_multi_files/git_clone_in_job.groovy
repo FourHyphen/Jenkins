@@ -54,7 +54,7 @@ void stage_a() {
     sh('find ./ -type f')
 
     jenkinsfile = load("1_job_multi_files/stage_a.groovy")
-    def input_json = jenkinsfile.create_input_json("Tsumugi", 17)
+    def input_json = jenkinsfile.create_input_json(this, "Tsumugi", 17)
     try {
         input_json.name = "Mizuki"
         println("InputJson.name can read and write: writing \"${input_json.name}\"")

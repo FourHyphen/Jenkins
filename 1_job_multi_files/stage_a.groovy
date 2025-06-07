@@ -6,8 +6,15 @@
 
 import groovy.json.*
 
+// println は何も工夫しないと標準出力に表示されるが、Jenkins は専用の print ストリームを使用するらしい
+//  -> 何も工夫しないとただ println を実行してもジョブコンソールログに何も出てこない
+// println での出力先を変更するのに以下方法は No such property: out for class: groovy.lang.Binding となった
+// import hudson.model.*
+// System.out = getBinding().out
+
 // cps 変換のためにシリアライズ化が必要
 class InputJson implements Serializable {
+    def script = null    // 呼び出し元 Jenkins ジョブ環境
     String name = null
     int age
 
@@ -17,13 +24,19 @@ class InputJson implements Serializable {
         // クラス外での import では CPS 変換時に Unknown type: IMPORT となった
         // import jenkins.*
 
-        // この書き方では自クラスを見に行って未定義エラーとなる。error() メソッドはどこの空間にあるか？
+        // 以下でも OK, java.lang.Exception: "name" property is read-only となる
+        // throw new Exception('"name" property is read-only')
+
+        // この書き方では自クラスを見に行って未定義エラーとなる
         // error('"name" property is read-only')
 
-        throw new Exception('"name" property is read-only')
+        // これで OK
+        // hudson.AbortException: this error is called by error(). "name" property is read-only
+        script.error('this error is called by error(). "name" property is read-only')
     }
 
-    def InputJson(String name, int age){
+    def InputJson(def script, String name, int age){
+        this.script = script
         this.name = name
         this.age = age
     }
@@ -39,14 +52,18 @@ class InputJson implements Serializable {
     "age": ${this.age}
 }"""
 
-        println('in toJsonString(): return: ')
-        println(json)
+        // echo だと自クラスを見に行って未定義エラーとなる
+        // echo('in toJsonString(): return: ')
+
+        // これでジョブコンソールログに出力された
+        script.println('in toJsonString(): return: ')
+        script.println(json)
         return json
     }
 }
 
-InputJson create_input_json(String name, int age){
-    return new InputJson(name, age)
+InputJson create_input_json(def script, String name, int age){
+    return new InputJson(script, name, age)
 }
 
 def stage_a(InputJson input_json) {
