@@ -23,6 +23,16 @@ pipeline {
                 }
             }
         }
+
+        stage('Stage B') {
+            steps {
+                timestamps {
+                    script {
+                        stage_b()
+                    }
+                }
+            }
+        }
     }
 
     post {
@@ -64,4 +74,17 @@ void stage_a() {
     }
 
     jenkinsfile.stage_a(input_json)
+}
+
+void stage_b() {
+    println("stage_b(): start")
+
+    jenkinsfile = load("1_job_multi_files/stage_b.groovy")
+
+    // load ファイル定義の enum を使用するには少し工夫が必要(stage_b.groovy 参照)
+    def process_type = jenkinsfile.ProcessType.Emulation
+
+    jenkinsfile.stage_b(this, process_type)
+
+    println("stage_b(): finish")
 }
