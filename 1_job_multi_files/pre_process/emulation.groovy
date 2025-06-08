@@ -16,7 +16,12 @@ class PreProcessEmulation implements Serializable {
     }
 
     String create_process() {
-        return "echo \"PreProcessEmulation.create_process()\""
+        String command = """
+echo "PreProcessEmulation.create_process()"
+echo "    USER_CREDENTIALS: ${jenkins_job.USER_CREDENTIALS}"
+echo "    PASSWORD_CREDENTIALS: ${jenkins_job.PASSWORD_CREDENTIALS}"
+"""
+        return command
     }
 }
 

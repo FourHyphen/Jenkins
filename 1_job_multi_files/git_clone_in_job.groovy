@@ -45,9 +45,6 @@ pipeline {
 def pre_process() {
     deleteDir()
 
-    // withCredentials(
-    //     [usernamePassword(credentialsId: 'github.com_Jenkins_repository', usernameVariable: 'USER_GIT',passwordVariable: 'PASSWORD_GIT')]
-    // ) { }
     checkout([$class: 'GitSCM',
         branches: [[name: '*/main']],
         doGenerateSubmoduleConfigurations: false,
@@ -85,7 +82,15 @@ void stage_b() {
     def process_type = ProcessType.Emulation
 
     // 本体処理呼び出し
-    load("1_job_multi_files/stage_b.groovy").stage_b(this, process_type)
+    withCredentials(
+        [usernamePassword(credentialsId: 'credentials_test', usernameVariable: 'USER_CREDENTIALS',passwordVariable: 'PASSWORD_CREDENTIALS')]
+    ) {
+        // この先のクラス内でクレデンシャルを参照する方法
+        // クレデンシャル含む文字列を StringBuilder.append() しても withCredentials 内ならちゃんと隠してくれる
+        // NG: "USER_CREDENTIALS: ${USER_CREDENTIALS}"
+        // OK: "USER_CREDENTIALS: ${jenkins_job.USER_CREDENTIALS}"
+        load("1_job_multi_files/stage_b.groovy").stage_b(this, process_type)
+    }
 
     // 終了
     println("stage_b(): finish")
