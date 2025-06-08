@@ -79,12 +79,14 @@ void stage_a() {
 void stage_b() {
     println("stage_b(): start")
 
-    jenkinsfile = load("1_job_multi_files/stage_b.groovy")
+    // 準備
+    // load ファイル定義の enum を使用するには少し工夫が必要(process_type.groovy 参照)
+    load("1_job_multi_files/process_type.groovy")
+    def process_type = ProcessType.Emulation
 
-    // load ファイル定義の enum を使用するには少し工夫が必要(stage_b.groovy 参照)
-    def process_type = jenkinsfile.ProcessType.Emulation
+    // 本体処理呼び出し
+    load("1_job_multi_files/stage_b.groovy").stage_b(this, process_type)
 
-    jenkinsfile.stage_b(this, process_type)
-
+    // 終了
     println("stage_b(): finish")
 }
