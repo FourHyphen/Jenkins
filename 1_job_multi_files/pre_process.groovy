@@ -1,7 +1,7 @@
 import groovy.json.*
 
-// enum ProcessType 参照
-load("1_job_multi_files/stage_b.groovy")
+// // enum ProcessType 参照
+// load("1_job_multi_files/stage_b.groovy")
 
 // cps 変換のためにシリアライズ化が必要
 // 本当は interface で String create_process() を強制したかったが他ファイルを load してもクラスは使えなかった
@@ -25,7 +25,7 @@ class PreProcess implements Serializable {
     }
 
     String create_process() {
-        builder.append("in PreProcess")
+        return "echo \"in PreProcess\""
     }
 }
 
