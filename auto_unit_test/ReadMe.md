@@ -42,7 +42,7 @@
   # WSL 閉じて再度表示させれば、docker ps -a 等が sudo 不要になるはずです
   ```
 
-### WSL 使用時に自動で docker daemon を起動する設定
+### 没: WSL 使用時に自動で docker daemon を起動する設定
 - WSL 使用する度に `sudo service docker start` が必要なのが面倒だったので設定したかった
 - 下記設定しても WSL 使用時に .bashrc や .profile が読まれないことがあったため諦めました
 
@@ -76,51 +76,54 @@
 
 <br>
 
-# Jenkins 環境
-## 手順
-- [参考](https://batmat.net/2018/09/07/how-to-run-and-upgrade-jenkins-using-the-official-docker-image/)
-- WSL 上の ubuntu で実施
-  - ~~Jenkins 2.313 の理由: 手元検証してたときのバージョンがこれだったため(これ以上の意味なし)~~
-    - 2.313 では Pipeline plugin のインストールに失敗するようになった
-  - Jenkins 2.350 の理由: 試してみたら動作が高速になっていたため
+# Jenkins 環境構築
+## docker イメージ作成
+- Jenkins バージョン
+  - 絶対にこのバージョンでないといけないという指定はない
+  - Pipeline plugin のインストールに成功するバージョンにすること
+    - 現状 Pipeline plugin は 2.350 でインストール成功を確認済み
+    - インストール失敗したら要バージョンアップ(Dockerfile 編集)
+  - [タグ参考](https://hub.docker.com/r/jenkins/jenkins)
+- コマンド
   ```
-  docker volume create jenkins-data
-  docker run --name jenkins-master \
-             -d \
-             --dns=8.8.8.8 \
-             -p 50000:50000 \
-             -p 8080:8080 \
-             -v jenkins-data:/var/jenkins_home \
-             -v /mnt:/mnt \
-             jenkins/jenkins:2.350
+  # WSL 上の ubuntu で実施
+  cd docker
   
-  # jobs.tar.gz を展開して /var/jenkins_home に配置
-  cd /mnt/c/jobs.tar.gz を置いてあるどこか
-  tar zxf jobs.tar.gz
-  docker cp jobs jenkins-master:/var/jenkins_home/
+  # 失敗する場合は --build-arg オプションでプロキシ設定したりなど
+  docker build -t jenkins-master-toolgr:2.350 .
+  ```
 
+## docker volume 作成
+- コマンド
+  ```
+  # WSL 上の ubuntu で実施
+  docker volume create jenkins-data
+  ```
+- Jenkins 環境構築し直す場合
+  - jenkins-data volume に設定を保存しているため、念のためこのボリュームを作り直した方がよいかも
+
+## jenkins-master コンテナ立ち上げ
+- コマンド
+  ```
+  # WSL 上の ubuntu で実施
+  docker volume create jenkins-data
+  ```
+
+## jenkins 本体設定
+- WSL 上の ubuntu で実施
+  ```
   # 出てきた文字列を確保
   docker exec jenkins-master bash -c 'cat $JENKINS_HOME/secrets/initialAdminPassword'
   ```
 - windows 上のブラウザで実施
-  ```
-  http://localhost:8080 にアクセス
-  上記確保した文字列を入れる
-  左側、install suggested plugin 的な方を選択(selectではない)
-  admin設定(自分専用なので適当でOK)
-    メアドに困ったら @example.com にすれば存在しないことが保証されてる
-  jenkinsurl は http://localhost:8080
-  ```
+  - http://localhost:8080 にアクセス
+  - 上記確保した文字列を入れる
+  - 左側、install suggested plugin 的な方を選択(selectではない)
+  - admin設定(自分専用なので適当でOK)
+    - メアドに困ったら @example.com にすれば存在しないことが保証されてる
+  - jenkinsurl は http://localhost:8080
 
-## 参考
-- Jenkins バージョン
-  - 現状 Pipeline plugin は 2.350 でインストール成功を確認済み
-  - インストール失敗するようになったらバージョンアップを検討すること
-  - [タグ参考](https://hub.docker.com/r/jenkins/jenkins)
-- Jenkins 環境構築し直す場合
-  - jenkins-data volume に設定を保存しているため、念のためこのボリュームを作り直した方がよいかも
-
-# Jenkins ジョブ
+# Jenkins ジョブ設定
 ## 全体構成
 - Jenkins ジョブのトップ場所
   - test_suite : フォルダ
@@ -138,57 +141,7 @@
     - 必ずビルドパラメーターの初期値に設定してください
   - このジョブ単体でも実行可能
 
-## (管理者用)ジョブ構築手順
-
-<details><summary>ユーザーに展開する環境作り方手順(折り畳み)</summary><div>
-
-- 手元の Jenkins 環境でジョブ作成
-  - test_suite : フォルダ、Jenkins のトップに作ること
-    - test_suite_job
-      - パイプラインジョブ
-      - ビルドパラメーター: なし
-      - Pipeline script
-        - Script 本文: `/mnt/c/ ... /test_suite_job.jenkinsfile` の中身をコピペ
-        - `use sandbox` のチェックは外す
-    - unit_test_***
-      - 名前はテスト対象のスクリプト名にしておくとわかりやすくなる
-      - パイプラインジョブ
-      - ビルドパラメーター
-        - TEST_TARGET_JOB_JENKINSFILE_PATH
-          - 文字列
-          - 初期値: `/mnt/c/ ... /テストしたいもの.jenkinsfile`
-        - UNIT_TEST_JENKINSFILE_PATH
-          - 文字列
-          - 初期値: `/mnt/c/ ... /unit_test_テストしたいもの.jenkinsfile`
-        - COMMON_JENKINSFILE_PATH
-          - 文字列
-          - 初期値: `/mnt/c/ ... /common.jenkinsfile`
-      - Pipeline script
-        - Script 本文: `/mnt/c/ ... /call_unit_test.jenkinsfile` の中身をコピペ
-        - `use sandbox` のチェックは外す
-- test_suite_job を実行して動作に問題ないことを確認
-- 以下を実行し、jobs フォルダを確保して圧縮
-  ```
-  docker exec jenkins-master cp -r /var/jenkins_home/jobs /mnt/c/どこか
-  cd /mnt/c/どこか
-  tar zcf jobs.tar.gz jobs
-  ```
-- この jobs.tar.gz をユーザーに展開
-
-</div></details>
-
-<br>
-
 # テスト手順
-## コンテナ起動
-```
-# docker daemon 起動
-sudo service docker start
-
-# Jenkins サーバー起動
-docker start jenkins-master
-```
-
 ## テスト実施
 ```
 http://localhost:8080 にアクセス
@@ -196,6 +149,17 @@ test_suite_job ジョブ開始
 
 他の unit_test_*** を実行できれば環境は OK です
 後はテスト作成して通るまでスクリプト修正してテスト実施してください
+```
+
+# WSL を再度立ち上げる場合
+コンテナ起動が必要。docker サービスが立ち上がっていないのでそこから。
+
+```
+# docker daemon 起動
+sudo service docker start
+
+# Jenkins サーバー起動
+docker start jenkins-master
 ```
 
 <br>

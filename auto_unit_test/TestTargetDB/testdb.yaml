@@ -1,0 +1,20 @@
+version: '3.0'
+services:
+  testdb:
+    image: postgres:17
+    container_name: testdb
+    ports:
+      - "5432:5432"
+    tty: true
+    environment:
+      POSTGRES_USER: testdb
+      POSTGRES_PASSWORD: testdb
+      POSTGRES_DB: testdb
+    volumes:
+      - /mnt/postgres/data:/var/lib/postgresql/data
+
+# この記述にすることで compose 外で作ったネットワークを使える
+networks:
+  default:
+    external:
+      name: auto-unit-test-network
