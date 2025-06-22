@@ -1,0 +1,4 @@
+{
+    "db_activate_docker_compose_path": "docker-compose.yml",
+    "db_table_sql_path": "db_table.sql"
+}

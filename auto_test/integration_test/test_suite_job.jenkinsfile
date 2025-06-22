@@ -1,0 +1,67 @@
+import groovy.json.*
+
+g_jenkins_integration_test_folder_url = 'http://localhost:8080/job/auto_test/job/integration_test/'    // 末尾 "/" で終わること
+g_jenkins_user_name = "admin"
+g_jenkins_user_password = "admin"
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Test execute') {
+            steps {
+                timestamps {
+                    script {
+                        execute_all_integration_test(g_jenkins_user_name,
+                                                     g_jenkins_user_password,
+                                                     g_jenkins_integration_test_folder_url)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Jenkins の integration test フォルダ配下にあるテストジョブを全て実行する
+def execute_all_integration_test(String jenkins_user_name,
+                                 String jenkins_user_password,
+                                 String jenkins_integration_test_folder_url) {
+    // Jenkins の integration test フォルダの中身を取得
+    def json = get_integration_test_folder_json(jenkins_user_name, jenkins_user_password, jenkins_integration_test_folder_url)
+
+    // 全ての integration test ジョブ名を取得
+    List integration_test_job_names = collect_integration_test_job_names(json)
+    println "Integration test job names: ${integration_test_job_names}"
+
+    // 全ての Jenkins の integration test を実行
+    execute_all_integration_test_job(integration_test_job_names)
+}
+
+// Jenkins の integration test フォルダの中身の構成を json で返す
+def get_integration_test_folder_json(String jenkins_user_name,
+                                     String jenkins_user_password,
+                                     String jenkins_integration_test_folder_url) {
+    String json_str = sh(returnStdout: true, script: "set +x ; export no_proxy=localhost ; curl -u ${jenkins_user_name}:${jenkins_user_password} ${jenkins_integration_test_folder_url}api/json")
+
+    try {
+        // JsonSlurper は内部的には遅延 Map でマルチスレッド NG のため Classic を使用
+        return new JsonSlurperClassic().parseText(json_str)
+    } catch (Exception e) {
+        println("json parse error, json_str:")
+        println(json_str)
+        throw e
+    }
+}
+
+// 全ての integration test ジョブ名を取得
+def collect_integration_test_job_names(def json) {
+    return json.jobs.findAll { it.name.contains("integration_test") }
+                    .collect { it.name }
+}
+
+// 全ての Jenkins の integration test を実行
+def execute_all_integration_test_job(List integration_test_job_names) {
+    integration_test_job_names.each {
+        build(job: it)
+    }
+}

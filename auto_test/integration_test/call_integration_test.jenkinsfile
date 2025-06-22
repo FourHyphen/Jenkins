@@ -1,0 +1,106 @@
+// ジョブ設定
+//     ジョブ名
+//         integration_test を含むテスト名
+//     スクリプト
+//         本ファイル
+//     ビルドパラメーター
+//         INTEGRATION_TEST_JENKINSFILE_PATH: テスト定義ファイルパス(jenkins-master からアクセスするパス) 
+//         COMMON_JENKINSFILE_PATH          : common.jenkinsfile のパス(jenkins-master からアクセスするパス)
+// 仕組み
+//     本ファイルから INTEGRATION_TEST_JENKINSFILE_PATH ファイルを読み込み、test_suite メソッドを実行
+//     INTEGRATION_TEST_JENKINSFILE_PATH ファイルと "同名(拡張子抜き).json" を設定ファイルとして読み込んでテストに渡す
+//     (結合テストの環境整備はテスト jenkinsfile 側で行う)
+
+import groovy.json.*
+
+g_integration_test_jenkinsfile = null    // integration_test_***.jenkinsfile の load 結果
+g_common_jenkinsfile = null              // common.jenkinsfile の load 結果
+g_settings_json = null                   // integration test の設定 json
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Init') {
+            steps {
+                timestamps {
+                    script {
+                        init(INTEGRATION_TEST_JENKINSFILE_PATH,
+                             COMMON_JENKINSFILE_PATH)
+                    }
+                }
+            }
+        }
+
+        stage('Test execute') {
+            steps {
+                timestamps {
+                    script {
+                        execute_test_suite(g_integration_test_jenkinsfile,
+                                           g_settings_json,
+                                           g_common_jenkinsfile)
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            deleteDir()
+        }
+    }
+}
+
+// 各種ファイルを読み込む
+def init(String integration_test_jenkinsfile_path, String common_jenkinsfile_path) {
+    // jenkinsfile を load
+    g_common_jenkinsfile = load(common_jenkinsfile_path)
+    g_integration_test_jenkinsfile = g_common_jenkinsfile.load_script(integration_test_jenkinsfile_path)
+
+    // integration test の設定を json として格納
+    g_settings_json = get_integration_test_settings_json(g_common_jenkinsfile, integration_test_jenkinsfile_path)
+}
+
+// integration test の設定 json ファイルを返す
+def get_integration_test_settings_json(def common, String integration_test_jenkinsfile_path) {
+    String json_path = get_integration_test_settings_json_path(integration_test_jenkinsfile_path)
+    println("設定 json ファイルパス: ${json_path}")
+
+    String json_str = common.read_file(json_path)
+    println("設定 json: ")
+    println(json_str)
+
+    // JsonSlurper は内部的には遅延 Map でマルチスレッド NG のため Classic を使用
+    return new JsonSlurperClassic().parseText(json_str)
+}
+
+// integration test の設定 json ファイルのパスを返す
+// json 格納フォルダは integration_test ファイルと同階層とする
+// json ファイル名は "テストファイル名拡張子なし.json" とする
+String get_integration_test_settings_json_path(String integration_test_jenkinsfile_path) {
+    File integration_test_file = new File(integration_test_jenkinsfile_path)
+
+    // json 格納フォルダパスを取得
+    String integration_test_dir_path = integration_test_file.getParent()
+
+    // json ファイル名設定
+    String basename = integration_test_file.getName()
+    String without_ext = basename.substring(0, basename.lastIndexOf('.'))
+
+    return "${integration_test_dir_path}/${without_ext}.json"
+}
+
+// テストを実行
+def execute_test_suite(def test_suite_jenkinsfile,
+                       def settings_json,
+                       def common_jenkinsfile) {
+    boolean result = test_suite_jenkinsfile.test_suite(settings_json, common_jenkinsfile)
+    if (result) {
+        println("test success.")
+    } else {
+        error("test failed")
+    }
+
+    return result
+}

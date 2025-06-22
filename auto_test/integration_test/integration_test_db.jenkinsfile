@@ -1,0 +1,42 @@
+import org.codehaus.groovy.runtime.MethodClosure    /* MethodClosure */
+
+// settings_json -> 設定 json ファイル(json クラス)
+// common -> common.jenkinsfile の load 結果
+def test_suite(def settings_json, def common) {
+    // "this." は省略不可
+    List tests = [this.&test_pre_process
+                 ]
+
+    // テスト実施
+    StringBuilder sb = new StringBuilder()
+    List results = tests.collect {
+        boolean result = it(settings_json, common, sb)
+        sb.append(common.get_result_str(result, it.getMethod()) + "\n\n")
+        return result
+    }
+
+    // 結果確認
+    boolean did_success_all = common.did_success_all(results)
+
+    // 結果整理
+    sb.append("------------\n")
+    sb.append("OK: ${results.count(true)} / NG: ${results.count(false)}\n")
+    did_success_all ? sb.append("test ... OK") : sb.append("test ... NG!")
+
+    // 結果表示
+    println(sb.toString())
+
+    return did_success_all
+}
+
+def test_pre_process(def settings_json, def common, StringBuilder sb) {
+    boolean result = true
+
+    println("debug: test_pre_process result = true")
+    result = true
+
+    return result
+}
+
+
+return this
