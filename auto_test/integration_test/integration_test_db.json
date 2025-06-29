@@ -1,4 +1,11 @@
 {
-    "db_activate_docker_compose_path": "docker-compose.yml",
-    "db_table_sql_path": "db_table.sql"
+    "comment": "事前にローカル Jenkins に git_jenkins_credential_id の通りの ID で認証情報を設定しておくこと",
+    "git_url": "https://github.com/FourHyphen/Jenkins.git",
+    "git_branch": "main",
+    "git_jenkins_credential_id": "github.com_Jenkins_repository",
+    "file_paths": {
+        "comment": "現在のフォルダで git clone 後の状態からアクセスできる相対パスを設定すること",
+        "db_activate_docker_compose_path": "./auto_test/test_target_db/testdb.yaml",
+        "db_table_sql_path": "./auto_test/test_target_db/init_tables.sql"
+    }
 }

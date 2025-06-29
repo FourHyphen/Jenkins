@@ -1,16 +1,19 @@
 import org.codehaus.groovy.runtime.MethodClosure    /* MethodClosure */
 
-// settings_json -> 設定 json ファイル(json クラス)
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+// file_paths -> 設定 json ファイル内 file_paths(dictionary)
 // common -> common.jenkinsfile の load 結果
-def test_suite(def settings_json, def common) {
+def test_suite(def file_paths, def common) {
     // "this." は省略不可
-    List tests = [this.&test_pre_process
+    List tests = [this.&test_create_db_instance
                  ]
 
     // テスト実施
     StringBuilder sb = new StringBuilder()
     List results = tests.collect {
-        boolean result = it(settings_json, common, sb)
+        boolean result = it(file_paths, common, sb)
         sb.append(common.get_result_str(result, it.getMethod()) + "\n\n")
         return result
     }
@@ -29,14 +32,22 @@ def test_suite(def settings_json, def common) {
     return did_success_all
 }
 
-def test_pre_process(def settings_json, def common, StringBuilder sb) {
+def test_create_db_instance(def file_paths, def common, StringBuilder sb) {
     boolean result = true
+
+    println("debug: file_paths: ")
+    println(file_paths)
+
+    String db_activate_docker_compose_path = file_paths.db_activate_docker_compose_path
+    String db_table_sql_path = file_paths.db_table_sql_path
+
+    println("debug: db_activate_docker_compose_path = ${db_activate_docker_compose_path}")
+    println("debug: db_table_sql_path = ${db_table_sql_path}")
 
     println("debug: test_pre_process result = true")
     result = true
 
     return result
 }
-
 
 return this

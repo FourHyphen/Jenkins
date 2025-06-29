@@ -32,6 +32,16 @@ pipeline {
             }
         }
 
+        stage('Git settings') {
+            steps {
+                timestamps {
+                    script {
+                        git_settings(g_settings_json)
+                    }
+                }
+            }
+        }
+
         stage('Test execute') {
             steps {
                 timestamps {
@@ -52,8 +62,10 @@ pipeline {
     }
 }
 
-// 各種ファイルを読み込む
-def init(String integration_test_jenkinsfile_path, String common_jenkinsfile_path) {
+// 準備
+void init(String integration_test_jenkinsfile_path, String common_jenkinsfile_path) {
+    deleteDir()
+
     // jenkinsfile を load
     g_common_jenkinsfile = load(common_jenkinsfile_path)
     g_integration_test_jenkinsfile = g_common_jenkinsfile.load_script(integration_test_jenkinsfile_path)
@@ -91,11 +103,38 @@ String get_integration_test_settings_json_path(String integration_test_jenkinsfi
     return "${integration_test_dir_path}/${without_ext}.json"
 }
 
+// json 記載の git 設定を実行
+void git_settings(def settings_json) {
+    // 設定ファイルに git リポジトリ定義がなければ処理不要
+    if (!settings_json.git_url) {
+        println("git_url is not defined in settings json.")
+    }
+
+    // git clone
+    git_clone(settings_json)
+}
+
+void git_clone(def settings_json) {
+    String branch = settings_json.branch ?: 'main'
+
+    checkout([$class: 'GitSCM',
+        branches: [[name: "*/${branch}"]],
+        doGenerateSubmoduleConfigurations: false,
+        extensions: [], 
+        submoduleCfg: [], 
+        userRemoteConfigs: [[credentialsId: settings_json.git_jenkins_credential_id,
+                             url: settings_json.git_url]]
+    ])
+
+    println("git_clone() result: ")
+    sh('ls -l')
+}
+
 // テストを実行
-def execute_test_suite(def test_suite_jenkinsfile,
-                       def settings_json,
-                       def common_jenkinsfile) {
-    boolean result = test_suite_jenkinsfile.test_suite(settings_json, common_jenkinsfile)
+boolean execute_test_suite(def test_suite_jenkinsfile,
+                           def settings_json,
+                           def common_jenkinsfile) {
+    boolean result = test_suite_jenkinsfile.test_suite(settings_json.file_paths, common_jenkinsfile)
     if (result) {
         println("test success.")
     } else {
