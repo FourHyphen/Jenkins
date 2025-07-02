@@ -45,4 +45,6 @@ RUN pip3 install --upgrade pip && \
       pytest \
       pyyaml
 
-ENTRYPOINT ["bash", "-c", "service docker start && /usr/bin/tini -- /usr/local/bin/jenkins.sh"]
+# 本来は service docker start を仕込みたかったが、WSL 終了によるコンテナ終了と
+# docker start による再立ち上げが上手くいかず諦めた
+# ENTRYPOINT ["bash", "-c", "service docker start && /usr/bin/tini -- /usr/local/bin/jenkins.sh"]

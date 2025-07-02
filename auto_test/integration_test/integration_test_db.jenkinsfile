@@ -5,9 +5,10 @@ import java.nio.file.Paths;
 
 // file_paths -> 設定 json ファイル内 file_paths(dictionary)
 // common -> common.jenkinsfile の load 結果
-def test_suite(def file_paths, def common) {
+boolean test_suite(def file_paths, def common) {
     // "this." は省略不可
-    List tests = [this.&test_create_db_instance
+    List tests = [this.&test_create_db_instance,
+                  this.&test_create_db_table
                  ]
 
     // テスト実施
@@ -32,22 +33,157 @@ def test_suite(def file_paths, def common) {
     return did_success_all
 }
 
-def test_create_db_instance(def file_paths, def common, StringBuilder sb) {
+void test_create_db_instance(def file_paths, def common, StringBuilder sb) {
     boolean result = true
+    // String db_table_sql_path = file_paths.db_table_sql_path
+    String db_activate_docker_compose_path = file_paths.db_activate_docker_compose_path
 
-    println("debug: file_paths: ")
-    println(file_paths)
+    try {
+        // 準備
+        prepare_create_db_instance()
 
+        // docker-compose で DB インスタンスを起動
+        int docker_compose_result = create_db_instance(db_activate_docker_compose_path)
+        if (!common.are_equals(0, docker_compose_result, null, sb)) {
+            result = false
+        }
+
+        // DB インスタンスコンテナが落ちていないことを確認
+        int docker_up_result = sh(returnStatus: true, script: "docker ps | grep testdb | grep -v grep")
+        if (!common.are_equals(0, docker_up_result, null, sb)) {
+            result = false
+        }
+    } catch (Exception e) {
+        sb.append("test_create_db_instance(): Unexpected exception occurred: ${e}")
+        result = false
+    } finally {
+        // 後片付け
+        rollback_create_db_instance(db_activate_docker_compose_path)
+    }
+
+    return result
+}
+
+void prepare_create_db_instance() {
+    // docker プロセス立ち上げ
+    start_docker()
+
+    // 立ち上げ直後だとたまに docker プロセスが立ち上がり切っていないことがあるので少し待機
+    sleep(1)
+
+    // DB インスタンス立ち上げに必要なものを作成
+    create_docker_network("auto-unit-test-network")
+}
+
+// docker プロセスがなければ立ち上げ
+void start_docker() {
+    // すでに docker プロセスがあれば何もしない
+    if (sh(returnStatus: true, script: "ps -axl | grep docker | grep -v grep") == 0) {
+        return
+    }
+
+    // docker 立ち上げ
+    String docker_start_cmd = "service docker start"
+    if (sh(returnStatus: true, script: docker_start_cmd) != 0) {
+        error("start_docker(): docker start failed. Command: ${docker_start_cmd}")
+    }
+}
+
+void create_docker_network(String network_name) {
+    // docker network がなければ作成
+    if (sh(returnStatus: true, script: "docker network ls | grep ${network_name}") != 0) {
+        sh(script: "docker network create ${network_name}")
+    }
+}
+
+int create_db_instance(String db_activate_docker_compose_path) {
+    int result = sh(returnStatus: true, script: "docker-compose -f ${db_activate_docker_compose_path} up -d")
+
+    // DB インスタンス立ち上がりまで少し待機
+    sleep(5)
+
+    return result
+}
+
+void rollback_create_db_instance(String db_activate_docker_compose_path) {
+    // DB インスタンスを停止
+    sh(returnStatus: true, script: "docker-compose -f ${db_activate_docker_compose_path} down")
+
+    // docker network を削除
+    rm_docker_network("auto-unit-test-network")
+
+    // docker 停止
+    stop_docker()
+}
+
+void rm_docker_network(String network_name) {
+    // docker network があれば削除
+    if (sh(returnStatus: true, script: "docker network ls | grep ${network_name} | grep -v grep") == 0) {
+        sh(script: "docker network rm ${network_name}")
+    }
+}
+
+void stop_docker() {
+    // docker プロセスがなければ何もしない
+    if (sh(returnStatus: true, script: "ps -axl | grep docker | grep -v grep") != 0) {
+        return
+    }
+
+    // docker 停止
+    String docker_stop_cmd = "service docker stop"
+    if (sh(returnStatus: true, script: docker_stop_cmd) != 0) {
+        error("stop_docker(): docker stop failed. Command: ${docker_stop_cmd}")
+    }
+}
+
+void test_create_db_table(def file_paths, def common, StringBuilder sb) {
+    boolean result = true
     String db_activate_docker_compose_path = file_paths.db_activate_docker_compose_path
     String db_table_sql_path = file_paths.db_table_sql_path
 
-    println("debug: db_activate_docker_compose_path = ${db_activate_docker_compose_path}")
-    println("debug: db_table_sql_path = ${db_table_sql_path}")
+    try {
+        // 準備
+        prepare_create_db_table(db_activate_docker_compose_path)
 
-    println("debug: test_pre_process result = true")
-    result = true
+        // テーブル作成
+        // docker exec での psql ならパスワード入力不要
+        // 標準入力から流し込むために interative 有効にする
+        sh(script: "docker exec -i testdb psql -U testdb -d testdb < ${db_table_sql_path}")
+
+        // テーブルの内容を確認
+        String check_sql = "SELECT * FROM PopTbl;"
+        String check_result = sh(returnStdout: true, script: "docker exec testdb psql -c \"${check_sql}\" -U testdb -d testdb")
+        println("check_result: ${check_result}")
+
+        // ここでは ERROR 文字列がなければよしとする
+        if (check_result.contains("ERROR")) {
+            sb.append("test_create_db_table(): table NG: file: ${db_table_sql_path}")
+            result = false
+        }
+    } catch (Exception e) {
+        sb.append("test_create_db_table(): Unexpected exception occurred: ${e}")
+        result = false
+    } finally {
+        // docker-compose down で DB インスタンスを停止
+        sh(returnStatus: true, script: "docker-compose -f ${db_activate_docker_compose_path} down")
+
+        // 後片付け
+        rollback_create_db_instance(db_activate_docker_compose_path)
+    }
 
     return result
+}
+
+void prepare_create_db_table(String db_activate_docker_compose_path) {
+    // /var/lib/postgresql/data のバインドマウントポイント
+    // データが残ってると狙い通りの環境にならないので毎回リセットする
+    sh(returnStatus: true, script: "rm -rf /mnt/postgres/data")
+
+    // DB インスタンス立ち上げ準備
+    prepare_create_db_instance()
+
+    // DB インスタンス立ち上げ
+    create_db_instance(db_activate_docker_compose_path)
 }
 
 return this
