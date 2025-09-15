@@ -1,0 +1,59 @@
+# docker build -t jenkins-node-centos7 -f centos7_jenkins_node_dockerfile .
+# docker run -itd --init --name=jenkins-node-centos7 --hostname=jenkins-node-centos7 --privileged --net=sjis-net -p 22:22 -v /mnt:/mnt jenkins-node-centos7:latest
+FROM centos:centos7
+
+USER root
+
+# yum repository url
+COPY CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
+
+# localectl は docker centos7 だと動かない
+RUN yum update -y
+RUN yum -y install \
+  sudo \
+  openssh-server \
+  git \
+  gcc \
+  make \
+  openssl \
+  libssl-dev \
+  libreadline-dev \
+  wget \
+  which
+
+# Java は面倒だったので分けた
+# openjdk-8-jdk だと java コマンドが入らなかった
+# java-1.8.0-openjdk だと Runtime version が 0.52.0 と古すぎて remoting.jar が動かず
+# java-11-openjdk-devel でも同じく古すぎ
+# https://it-jog.com/java/intro/install-openjdk-oncentos7
+RUN cat <<EOF > /etc/yum.repos.d/adoptium.repo
+[Adoptium]
+name=Adoptium
+baseurl=https://packages.adoptium.net/artifactory/rpm/${DISTRIBUTION_NAME:-$(. /etc/os-release; echo $ID)}/\$releasever/\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.adoptium.net/artifactory/api/gpg/key/public
+EOF
+RUN yum update -y && \
+  yum install -y temurin-17-jdk
+
+# ssh
+RUN mkdir ~/.ssh
+
+# id_rsa は centos7 側で事前に作成しておく(git 管理には含めてない)
+# ssh で Jenkins ノードとして使えるようになれば良かったため余計な設定があるはず
+COPY id_rsa.pub /root/.ssh/authorized_keys
+RUN chmod 700 /root/.ssh
+RUN chmod 600 /root/.ssh/authorized_keys
+
+COPY id_rsa /etc/ssh/ssh_host_rsa_key
+RUN chmod 600 /etc/ssh/ssh_host_rsa_key
+COPY id_rsa.pub /etc/ssh/ssh_host_rsa_key.pub
+RUN chmod 600 /etc/ssh/ssh_host_rsa_key.pub
+
+RUN echo "StrictHostKeyChecking no" >> /root/.ssh/config
+RUN echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+
+RUN mkdir -p /var/run/sshd
+
+CMD ["/usr/sbin/sshd","-D"]
