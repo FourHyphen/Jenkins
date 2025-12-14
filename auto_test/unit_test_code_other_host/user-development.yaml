@@ -1,0 +1,38 @@
+version: '3.0'
+services:
+  # DooD でテスト用 DB をホスト側に構築するなら有効化
+  # # compose は未使用ネットワークを使わずに勝手に自前でネットワークを作るので、
+  # # ネットワークを使うためだけのコンテナを用意する
+  # only-using-network:
+  #   image: ubuntu:24.04
+  #   container_name: only-using-network
+  #   command: sleep infinity
+
+  # (1) "user" を誰のものか区別できるよう replace してください
+  # (2) ポートをホスト docker の空いているポートに変更してください
+  #     docker ps -a で確認できます
+  # TODO: イメージ名注意
+  user-development:
+    image: my-development:latest
+    container_name: user-development
+    ports:
+      - "60001:22"
+    volumes:
+      - /:/host
+      # DooD でテスト用 DB をホスト側に構築するなら有効化
+      # - /var/run/docker.sock:/var/run/docker.sock
+    # DooD でテスト用 DB をホスト側に構築するなら以下全て無効化
+    # network_mode: host
+    privileged: true
+
+# DooD でテスト用 DB をホスト側に構築するなら有効化
+# # この記述にすることで compose 外で作ったネットワークを使える
+# networks:
+#   default:
+#     external:
+#       name: auto-unit-test-network
+
+# # external 付けることで compose 外で作った volume を使える
+# volumes:
+#   jenkins-data:
+#     external: true
