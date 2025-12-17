@@ -24,6 +24,8 @@ services:
     # DooD でテスト用 DB をホスト側に構築するなら以下全て無効化
     # network_mode: host
     privileged: true
+    # docker イメージの ENTRYPOINT だとコンテナ再起動時に sshd 起動失敗したのでこちらで指定
+    command: ["/usr/sbin/sshd", "-D"]
 
 # DooD でテスト用 DB をホスト側に構築するなら有効化
 # # この記述にすることで compose 外で作ったネットワークを使える

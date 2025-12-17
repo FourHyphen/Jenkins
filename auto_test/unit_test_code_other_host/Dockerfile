@@ -151,5 +151,5 @@ EXPOSE 22
 # 使用済みの apt キャッシュを削除
 RUN rm -rf /var/lib/apt/lists/*
 
-# コンテナ立ち上げ時に sshd 起動
-ENTRYPOINT ["/usr/sbin/sshd", "-D", "-d"]
+# # ENTRYPOINT での sshd 起動はコンテナ再起動時に上手くいかなかったため compose 側で指定する
+# ENTRYPOINT ["/usr/sbin/sshd", "-D", "-d"]
