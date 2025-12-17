@@ -127,9 +127,13 @@ RUN mkdir -p /etc/ssh \
     && chmod 700 /root/.ssh
 
 RUN apt update -y \
-    && apt install -y openssh-server \
-    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+    && apt install -y openssh-server
+
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+    # # ssh ログイン時のパスワード要求なし設定
     # && sed -i 's/UsePAM yes/UsePAM no/' /etc/ssh/sshd_config \
+    # && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config \
+    # && sed -i 's/PubkeyAuthentication yes/PubkeyAuthentication no/' /etc/ssh/sshd_config
     # && chmod 600 ~/.ssh/authorized_keys
 
 COPY ./ssh/ssh_host_rsa_key                               /etc/ssh/ssh_host_rsa_key
